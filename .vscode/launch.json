@@ -1,0 +1,13 @@
+{
+  "configurations": [
+    {
+      "name": "Launch",
+      "type": "lldb",
+      "request": "launch",
+      "program": "./bin/scc",
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": true,
+      "args": ["assets"]
+    }
+  ]
+}
