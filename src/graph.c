@@ -5,6 +5,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,8 +48,8 @@ graph graph_T(graph g) {
   return t;
 }
 
-void graph_dfs(graph g, int s, int visitedV[]) {
-  visitedV[s] = 1;
+void graph_dfs(graph g, int s, bool visitedV[]) {
+  visitedV[s] = true;
   printf("%d ", s);
 
   node n = g->nodes[s];
@@ -59,8 +60,8 @@ void graph_dfs(graph g, int s, int visitedV[]) {
   }
 }
 
-void graph_fill_order(graph g, int s, int visitedV[], node *stack) {
-  visitedV[s] = 1;
+void graph_fill_order(graph g, int s, bool visitedV[], node *stack) {
+  visitedV[s] = true;
 
   node n = g->nodes[s];
   while (!node_is_empty(n)) {
@@ -75,25 +76,26 @@ void graph_fill_order(graph g, int s, int visitedV[], node *stack) {
 void graph_print_scc(graph g) {
   node stack = malloc(sizeof(node));
 
-  int visitedV[g->v];
+  bool *visitedV = malloc(g->v * sizeof(bool));
   for (int i = 0; i < g->v; i++)
-    visitedV[i] = 0;
+    visitedV[i] = false;
 
   for (int i = 0; i < g->v; i++)
-    if (visitedV[i] == 0)
+    if (!visitedV[i])
       graph_fill_order(g, i, visitedV, &stack);
 
   graph g_T = graph_T(g);
 
   for (int i = 0; i < g->v; i++)
-    visitedV[i] = 0;
+    visitedV[i] = false;
 
   while (!node_is_empty(stack)) {
     int s = node_pop(&stack);
 
-    if (visitedV[s] == 0) {
+    if (!visitedV[s]) {
       graph_dfs(g_T, s, visitedV);
-      puts("\n");
+      puts("");
     }
   }
+  free(visitedV);
 }

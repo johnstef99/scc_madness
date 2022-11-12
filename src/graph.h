@@ -26,9 +26,9 @@ void graph_add_edge(graph *g, int s, int d);
 
 graph graph_T(graph g);
 
-void graph_dfs(graph g, int s, int visitedV[]);
+void graph_dfs(graph g, int s, bool visitedV[]);
 
-void graph_fill_order(graph g, int s, int visitedV[], node *stack);
+void graph_fill_order(graph g, int s, bool visitedV[], node *stack);
 
 void graph_print_scc(graph g);
 
