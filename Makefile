@@ -1,6 +1,6 @@
 #
 # Created by:   github.com/johnstef99
-# Last updated: 2022-11-10
+# Last updated: 2022-11-12
 #
 
 SRC_DIR  = ./src
@@ -13,20 +13,20 @@ LIBFILES   = $(wildcard $(LIB_DIR)/*.c)
 OBJFILES = $(CFILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) $(LIBFILES:$(LIB_DIR)/%.c=$(OBJ_DIR)/%.o)
 OUT      = ./bin/scc
 
-CFLAGS = -Wall
+CFLAGS = -Wall -g
 
 $(OUT): $(OBJFILES)
 	$(CC) -o $@ $^ 
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -g -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJ_DIR)/%.o: $(LIB_DIR)/%.c
-	$(CC) $(CFLAGS) -g -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 .PHONY: clean test run
 run:
-	./bin/scc assets
+	./bin/scc assets/celegansneural.mtx
 
 clean:
 	rm -f $(OBJFILES) $(OUT)

@@ -6,8 +6,8 @@
       "request": "launch",
       "program": "./bin/scc",
       "cwd": "${workspaceFolder}",
-      "stopOnEntry": true,
-      "args": ["assets"]
+      "stopOnEntry": false,
+      "args": ["assets/celegansneural.mtx"]
     }
   ]
 }
