@@ -1,30 +1,38 @@
 /*
  *
  * Created by:   github.com/johnstef99
- * Last updated: 2022-11-12
+ * Last updated: 2022-11-18
  *
  */
 
 #ifndef NODE_H
 #define NODE_H
 
+#include <stdlib.h>
+#include <stdint.h>
+
+typedef int *point_to_i;
+
 struct Node {
-  int data;
+  void *data;
   struct Node *next;
 };
 
+typedef uint8_t *pByte;
+
 typedef struct Node *node;
 
-node node_new(int data);
+node node_new(void *data, size_t data_size);
 
-int node_is_empty(node n);
+uint8_t node_push(node *head, void *data, size_t data_size);
 
-void node_push(node *n, int data);
+uint8_t node_pop(node *head, void *data, size_t data_size);
 
-int node_pop(node *root);
+uint8_t node_peek(node head, void *data, size_t data_size);
 
-int node_peak(node root);
+size_t node_peek_int(node head);
 
-void node_free(node *root);
+uint8_t node_free(node *head);
 
 #endif
+

@@ -1,49 +1,87 @@
 /*
  *
  * Created by:   github.com/johnstef99
- * Last updated: 2022-11-12
+ * Last updated: 2022-11-18
  *
  */
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "node.h"
 
-node node_new(int data) {
-  node n = (node)malloc(sizeof(node));
-  n->data = data;
-  n->next = NULL;
+node node_new(void *data, size_t data_size) {
+  node n = malloc(sizeof(struct Node));
+  n->data = malloc(data_size);
+  if (!n->data) {
+    return NULL;
+  }
+
+  for (int i = 0; i < data_size; i++) {
+    *(pByte)(n->data + i) = *(pByte)(data + i);
+  }
+
   return n;
 }
 
-int node_is_empty(node n) { return !n; }
-
-void node_push(node *root, int data) {
-  node n = node_new(data);
-  n->next = *root;
-  *root = n;
-}
-
-int node_pop(node *root) {
-  if (node_is_empty(*root))
-    return INT32_MIN;
-  node temp = *root;
-  *root = (*root)->next;
-  int popped = temp->data;
-  free(temp);
-  return popped;
-}
-
-int node_peak(node root) {
-  if (node_is_empty(root))
-    return INT32_MIN;
-  return root->data;
-}
-
-void node_free(node *root) {
-  while (!node_is_empty(*root)) {
-    node_pop(root);
+uint8_t node_push(node *head, void *data, size_t data_size) {
+  node n = malloc(sizeof(struct Node));
+  n->data = malloc(data_size);
+  if (!n->data) {
+    return 1;
   }
+
+  n->next = *head;
+
+  for (int i = 0; i < data_size; i++) {
+    *(pByte)(n->data + i) = *(pByte)(data + i);
+  }
+
+  *head = n;
+
+  return 0;
 }
+
+uint8_t node_pop(node *head, void *data, size_t data_size) {
+  if (!*head)
+    return 1;
+  void *popped = (*head)->data;
+  *head = (*head)->next;
+
+  for (int i = 0; i < data_size; i++) {
+    *(pByte)(data + i) = *(pByte)(popped + i);
+  }
+
+  free(popped);
+  return 0;
+}
+
+uint8_t node_peek(node head, void *data, size_t data_size) {
+  if (!head)
+    return 1;
+  void *peeked = head->data;
+
+  for (int i = 0; i < data_size; i++) {
+    *(pByte)(data + i) = *(pByte)(peeked + i);
+  }
+
+  return 0;
+}
+
+size_t node_peek_int(node head) {
+  if (!head)
+    return INT64_MIN;
+  void *data = malloc(sizeof(size_t));
+
+  for (size_t i = 0; i < sizeof(size_t); i++) {
+    *(pByte)(data + i) = *(pByte)(head->data + i);
+  }
+  size_t out = *(size_t *)data;
+  free(data);
+  return out;
+}
+
+uint8_t node_free(node *head) {
+  while (*head) {
+    node_pop(head, NULL, 0);
+  }
+  return 0;
+}
+
