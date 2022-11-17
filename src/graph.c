@@ -1,101 +1,142 @@
 /*
  *
  * Created by:   github.com/johnstef99
- * Last updated: 2022-11-12
+ * Last updated: 2022-11-18
  *
  */
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "graph.h"
+#include "fifo.h"
 #include "node.h"
 
-graph graph_new(int v) {
-  graph g = malloc(v * sizeof(node));
+graph graph_new(size_t v) {
+  graph g = malloc(sizeof(struct Graph));
   if (!g) {
-    fprintf(stderr, "Graph - Memory allocation failed!\n");
+    return NULL;
   }
-
   g->v = v;
-  g->nodes = malloc(v * sizeof(node));
-  if (!g->nodes) {
-    fprintf(stderr, "Graph.nodes - Memory allocation failed!\n");
+  g->edges = malloc(v * sizeof(struct Node));
+  g->r_edges = malloc(v * sizeof(struct Node));
+  g->removed = malloc(v * sizeof(bool));
+  g->scc_id = malloc(v * sizeof(size_t));
+  g->n_trimmed = 0;
+  for (size_t i = 0; i < v; i++) {
+    g->scc_id[i] = i;
+    g->removed[i] = false;
   }
-
   return g;
 }
 
-void graph_free(graph *g) {
-  for (int i = 0; i < (*g)->v; i++) {
-    node_free(&(*g)->nodes[i]);
-  }
-  free((*g)->nodes);
-  free(*g);
+uint8_t graph_add_edge(graph g, size_t s, size_t d) {
+  node_push(&(g->edges[s]), &d, sizeof(size_t));
+  return node_push(&(g->r_edges[d]), &s, sizeof(size_t));
 }
 
-void graph_add_edge(graph *g, int s, int d) { node_push(&(*g)->nodes[s], d); }
-
-graph graph_T(graph g) {
-  graph t = graph_new(g->v);
-  for (int i = 0; i < g->v; i++) {
-    while (!node_is_empty(g->nodes[i])) {
-      graph_add_edge(&t, node_pop(&g->nodes[i]), i);
+void graph_trim(graph g) {
+  for (size_t v = 0; v < g->v; v++) {
+    bool zero_in =
+        g->r_edges[v] == NULL ||
+        (node_peek_int(g->r_edges[v]) == v && g->r_edges[v]->next == NULL);
+    bool zero_out = g->edges[v] == NULL || (node_peek_int(g->edges[v]) == v &&
+                                            g->edges[v]->next == NULL);
+    if (zero_in || zero_out) {
+      g->removed[v] = true;
+      g->n_trimmed++;
     }
   }
-  return t;
 }
 
-void graph_dfs(graph g, int s, bool visitedV[]) {
-  visitedV[s] = true;
-  printf("%d ", s);
+node graph_bfs(graph g, size_t entry, size_t *colors) {
+  node scc = node_new(&entry, sizeof(size_t));
 
-  node n = g->nodes[s];
-  while (!node_is_empty(n)) {
-    if (!visitedV[n->data])
-      graph_dfs(g, n->data, visitedV);
-    n = n->next;
+  g->removed[entry] = true;
+
+  size_t *vi = malloc(sizeof(size_t));
+  if (!vi) {
+    fprintf(stderr, "Memory allocation failed!\n");
   }
-}
 
-void graph_fill_order(graph g, int s, bool visitedV[], node *stack) {
-  visitedV[s] = true;
-
-  node n = g->nodes[s];
-  while (!node_is_empty(n)) {
-    if (!visitedV[n->data])
-      graph_fill_order(g, n->data, visitedV, stack);
+  node n = g->r_edges[entry];
+  fifo q = fifo_new();
+  while (n) {
+    node_peek(n, vi, sizeof(size_t));
+    fifo_enqueue(q, vi, sizeof(size_t));
     n = n->next;
   }
 
-  node_push(stack, s);
-}
-
-void graph_print_scc(graph g) {
-  node stack = malloc(sizeof(node));
-
-  bool *visitedV = malloc(g->v * sizeof(bool));
-  for (int i = 0; i < g->v; i++)
-    visitedV[i] = false;
-
-  for (int i = 0; i < g->v; i++)
-    if (!visitedV[i])
-      graph_fill_order(g, i, visitedV, &stack);
-
-  graph g_T = graph_T(g);
-
-  for (int i = 0; i < g->v; i++)
-    visitedV[i] = false;
-
-  while (!node_is_empty(stack)) {
-    int s = node_pop(&stack);
-
-    if (!visitedV[s]) {
-      graph_dfs(g_T, s, visitedV);
-      puts("");
+  while (!fifo_is_empty(q)) {
+    fifo_dequeue(q, vi, sizeof(size_t));
+    if (!g->removed[*vi] && colors[*vi] == entry) {
+      g->removed[*vi] = true;
+      node_push(&scc, vi, sizeof(size_t));
+      n = g->r_edges[*vi];
+      while (n) {
+        node_peek(n, vi, sizeof(size_t));
+        fifo_enqueue(q, vi, sizeof(size_t));
+        n = n->next;
+      }
     }
   }
-  free(visitedV);
+
+  free(vi);
+  return scc;
 }
+
+bool graph_is_empty(graph g) {
+  for (size_t i = 0; i < g->v; i++) {
+    if (!g->removed[i])
+      return false;
+  }
+  return true;
+}
+
+void graph_colorSCC(graph g) {
+  size_t *colors = malloc(g->v * sizeof(size_t));
+  while (!graph_is_empty(g)) {
+    for (size_t v = 0; v < g->v; v++) {
+      if (!g->removed[v]) {
+        colors[v] = v;
+      } else {
+        colors[v] = g->scc_id[v];
+      }
+    }
+
+    bool color_changed = true;
+    while (color_changed) {
+      color_changed = false;
+      size_t u, w;
+      node u_edges;
+      for (u = 0; u < g->v; u++) {
+        if (!g->removed[u]) {
+          u_edges = g->edges[u];
+          while (u_edges != NULL) {
+            w = node_peek_int(u_edges);
+            if (colors[u] > colors[w]) {
+              color_changed = true;
+              colors[w] = colors[u];
+            }
+            u_edges = u_edges->next;
+          }
+        }
+      }
+    }
+
+    uint8_t *used_color = calloc(g->v, sizeof(uint8_t));
+    for (size_t i = 0; i < g->v; i++) {
+      if (!g->removed[i] && used_color[colors[i]] == 0) {
+        used_color[colors[i]] = 1;
+        node scc = graph_bfs(g, colors[i], colors);
+        size_t *vc = malloc(sizeof(size_t));
+        while (scc != NULL) {
+          node_pop(&scc, vc, sizeof(size_t));
+          g->removed[*vc] = true;
+          g->scc_id[*vc] = colors[i];
+        }
+      }
+    }
+    free(used_color);
+  }
+  free(colors);
+  return;
+}
+
