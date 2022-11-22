@@ -103,13 +103,11 @@ void graph_colorSCC(graph g) {
       }
     }
 
-    bool color_changed = true;
-    size_t *old_colors = malloc(g->v * sizeof(size_t));
+    size_t w;
+    _Atomic bool color_changed = true;
     while (color_changed) {
       color_changed = false;
-      memcpy(old_colors, colors, g->v * sizeof(size_t));
 
-      size_t w;
       cilk_for(size_t u = 0; u < g->v; u++) {
         if (!g->removed[u]) {
           for (node u_edges = g->edges[u]; u_edges != NULL;
@@ -117,13 +115,10 @@ void graph_colorSCC(graph g) {
             w = node_peek_int(u_edges);
             if (colors[u] > colors[w]) {
               colors[w] = colors[u];
+              color_changed = true;
             }
           }
         }
-      }
-
-      if (memcmp(old_colors, colors, g->v * sizeof(size_t)) != 0) {
-        color_changed = true;
       }
     }
 
