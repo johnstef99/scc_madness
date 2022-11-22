@@ -121,10 +121,8 @@ void graph_colorSCC(graph g) {
       }
     }
 
-    uint8_t *used_color = calloc(g->v, sizeof(uint8_t));
     for (size_t i = 0; i < g->v; i++) {
-      if (!g->removed[i] && used_color[colors[i]] == 0) {
-        used_color[colors[i]] = 1;
+      if (!g->removed[i] && colors[i] == i) {
         node scc = graph_bfs(g, colors[i], colors);
         size_t *vc = malloc(sizeof(size_t));
         while (scc != NULL) {
@@ -134,9 +132,7 @@ void graph_colorSCC(graph g) {
         }
       }
     }
-    free(used_color);
   }
   free(colors);
   return;
 }
-
