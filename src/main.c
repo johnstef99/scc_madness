@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "../libs/mmio.h"
 #include "fifo.h"
@@ -64,17 +65,19 @@ int main(int argc, char *argv[]) {
   graph g = fill_graph_from_file(argv[1]);
   graph_trim(g);
   printf("Trimmed: %zu vertices\n", g->n_trimmed);
+
+  time_t start = time(NULL);
   graph_colorSCC(g);
+  time_t end = time(NULL);
+
+  printf("colorSCC time: %fs\n", (double)(end - start));
 
   int num_of_scc = 0;
-  uint8_t *used_id = calloc(g->v, sizeof(uint8_t));
   for (int i = 0; i < g->v; i++) {
-    if (used_id[g->scc_id[i]] == 0) {
-      used_id[g->scc_id[i]] = 1;
+    if (g->scc_id[i] == i) {
       num_of_scc++;
     }
   }
-  free(used_id);
 
   printf("Num of scc: %d\n", num_of_scc);
 
