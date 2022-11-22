@@ -20,7 +20,6 @@ graph fill_graph_from_file(char *path) {
   MM_typecode matcode;
   FILE *f;
   int M, N, nz;
-  size_t i, *I, *J;
 
   if ((f = fopen(path, "r")) == NULL) {
     fprintf(stderr, "Couldn't open file %s\n", path);
@@ -35,11 +34,11 @@ graph fill_graph_from_file(char *path) {
   if ((ret_code = mm_read_mtx_crd_size(f, &M, &N, &nz)) != 0)
     exit(1);
 
-  I = (size_t *)malloc(nz * sizeof(size_t));
-  J = (size_t *)malloc(nz * sizeof(size_t));
-
-  for (i = 0; i < nz; i++) {
-    fscanf(f, "%zu %zu\n", &I[i], &J[i]);
+  size_t a, b;
+  graph g = graph_new(M);
+  for (size_t i = 0; i < nz; i++) {
+    fscanf(f, "%zu %zu\n", &a, &b);
+    graph_add_edge(g, a - 1, b - 1);
   }
 
   if (f != stdin)
@@ -48,10 +47,6 @@ graph fill_graph_from_file(char *path) {
   mm_write_banner(stdout, matcode);
   mm_write_mtx_crd_size(stdout, M, N, nz);
 
-  graph g = graph_new(M);
-  for (i = 0; i < nz; i++) {
-    graph_add_edge(g, I[i] - 1, J[i] - 1);
-  }
   return g;
 }
 
