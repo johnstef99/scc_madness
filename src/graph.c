@@ -1,7 +1,7 @@
 /*
  *
  * Created by:   github.com/johnstef99
- * Last updated: 2022-11-18
+ * Last updated: 2022-11-22
  *
  */
 
@@ -102,20 +102,18 @@ void graph_colorSCC(graph g) {
     }
 
     bool color_changed = true;
+    size_t u, w;
     while (color_changed) {
       color_changed = false;
-      size_t u, w;
-      node u_edges;
       for (u = 0; u < g->v; u++) {
         if (!g->removed[u]) {
-          u_edges = g->edges[u];
-          while (u_edges != NULL) {
+          for (node u_edges = g->edges[u]; u_edges != NULL;
+               u_edges = u_edges->next) {
             w = node_peek_int(u_edges);
             if (colors[u] > colors[w]) {
               color_changed = true;
               colors[w] = colors[u];
             }
-            u_edges = u_edges->next;
           }
         }
       }
