@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "../libs/mmio.h"
 #include "fifo.h"
@@ -19,7 +20,6 @@ graph fill_graph_from_file(char *path) {
   MM_typecode matcode;
   FILE *f;
   int M, N, nz;
-  size_t i, *I, *J;
 
   if ((f = fopen(path, "r")) == NULL) {
     fprintf(stderr, "Couldn't open file %s\n", path);
@@ -34,11 +34,11 @@ graph fill_graph_from_file(char *path) {
   if ((ret_code = mm_read_mtx_crd_size(f, &M, &N, &nz)) != 0)
     exit(1);
 
-  I = (size_t *)malloc(nz * sizeof(size_t));
-  J = (size_t *)malloc(nz * sizeof(size_t));
-
-  for (i = 0; i < nz; i++) {
-    fscanf(f, "%zu %zu\n", &I[i], &J[i]);
+  graph g = graph_new(M);
+  size_t a, b;
+  for (size_t i = 0; i < nz; i++) {
+    fscanf(f, "%zu %zu\n", &a, &b);
+    graph_add_edge(g, a - 1, b - 1);
   }
 
   if (f != stdin)
@@ -46,11 +46,8 @@ graph fill_graph_from_file(char *path) {
 
   mm_write_banner(stdout, matcode);
   mm_write_mtx_crd_size(stdout, M, N, nz);
+  puts("--------");
 
-  graph g = graph_new(M);
-  for (i = 0; i < nz; i++) {
-    graph_add_edge(g, I[i] - 1, J[i] - 1);
-  }
   return g;
 }
 
@@ -63,20 +60,21 @@ int main(int argc, char *argv[]) {
 
   graph g = fill_graph_from_file(argv[1]);
   graph_trim(g);
-  printf("Trimmed: %zu vertices\n", g->n_trimmed);
+  printf("Trimmed:\t %zu vertices\n", g->n_trimmed);
+
+  time_t start = time(NULL);
   graph_colorSCC(g);
+  time_t end = time(NULL);
+
+  printf("colorSCC time:\t %fs\n", (double)(end - start));
 
   int num_of_scc = 0;
-  uint8_t *used_id = calloc(g->v, sizeof(uint8_t));
   for (int i = 0; i < g->v; i++) {
-    if (used_id[g->scc_id[i]] == 0) {
-      used_id[g->scc_id[i]] = 1;
+    if (g->scc_id[i] == i) {
       num_of_scc++;
     }
   }
-  free(used_id);
-
-  printf("Num of scc: %d\n", num_of_scc);
+  printf("Num of scc:\t %d\n", num_of_scc);
 
   return 0;
 }
