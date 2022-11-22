@@ -9,6 +9,8 @@
 #include "fifo.h"
 #include "node.h"
 
+#include <cilk/cilk.h>
+
 graph graph_new(size_t v) {
   graph g = malloc(sizeof(struct Graph));
   if (!g) {
@@ -102,29 +104,31 @@ void graph_colorSCC(graph g) {
     }
 
     bool color_changed = true;
+    size_t *old_colors = malloc(g->v * sizeof(size_t));
     while (color_changed) {
       color_changed = false;
-      size_t u, w;
-      node u_edges;
-      for (u = 0; u < g->v; u++) {
+      memcpy(old_colors, colors, g->v * sizeof(size_t));
+
+      size_t w;
+      cilk_for(size_t u = 0; u < g->v; u++) {
         if (!g->removed[u]) {
-          u_edges = g->edges[u];
-          while (u_edges != NULL) {
+          for (node u_edges = g->edges[u]; u_edges != NULL;
+               u_edges = u_edges->next) {
             w = node_peek_int(u_edges);
             if (colors[u] > colors[w]) {
-              color_changed = true;
               colors[w] = colors[u];
             }
-            u_edges = u_edges->next;
           }
         }
       }
+
+      if (memcmp(old_colors, colors, g->v * sizeof(size_t)) != 0) {
+        color_changed = true;
+      }
     }
 
-    uint8_t *used_color = calloc(g->v, sizeof(uint8_t));
-    for (size_t i = 0; i < g->v; i++) {
-      if (!g->removed[i] && used_color[colors[i]] == 0) {
-        used_color[colors[i]] = 1;
+    cilk_for(size_t i = 0; i < g->v; i++) {
+      if (!g->removed[i] && colors[i] == i) {
         node scc = graph_bfs(g, colors[i], colors);
         size_t *vc = malloc(sizeof(size_t));
         while (scc != NULL) {
@@ -134,9 +138,7 @@ void graph_colorSCC(graph g) {
         }
       }
     }
-    free(used_color);
   }
   free(colors);
   return;
 }
-

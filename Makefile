@@ -1,35 +1,31 @@
 #
 # Created by:   github.com/johnstef99
-# Last updated: 2022-11-12
+# Last updated: 2022-11-22
 #
 
 SRC_DIR  = ./src
 OBJ_DIR  = ./obj
 LIB_DIR  = ./libs
 
-CC       = clang
+CC       = xcrun /opt/opencilk/bin/clang
 CFILES   = $(wildcard $(SRC_DIR)/*.c)
 LIBFILES   = $(wildcard $(LIB_DIR)/*.c)
 OBJFILES = $(CFILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) $(LIBFILES:$(LIB_DIR)/%.c=$(OBJ_DIR)/%.o)
 OUT      = ./bin/scc
 
-CFLAGS = -Wall -g
+CFLAGS = -fopencilk -O3
 
-$(OUT): $(OBJFILES)
-	$(CC) -o $@ $^ 
+all: $(OUT)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+debug: CFLAGS = -fopencilk -fsanitize=cilk -Og -g -D_FORTIFY_SOURCE=0 
+debug: $(OUT)
 
-$(OBJ_DIR)/%.o: $(LIB_DIR)/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+$(OUT): 
+	$(CC) $(CFLAGS) -o $@ $(LIBFILES) $(CFILES)
 
 .PHONY: clean test run
 run:
-	./bin/scc assets/celegansneural.mtx
+	./bin/scc ./assets/eu-2005.mtx
 
 clean:
-	rm -f $(OBJFILES) $(OUT)
-
-test:
-	echo $(OBJFILES)
+	rm -f $(OUT)
