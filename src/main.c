@@ -26,13 +26,13 @@ int main(int argc, char *argv[]) {
   csx csc = csc_from_file(argv[1]);
   graph g = graph_new_from_csc(csc);
   graph_trim(g);
-  printf("Trimmed: %zu vertices\n", g->n_trimmed);
+  printf("Trimmed:\t %zu vertices\n", g->n_trimmed);
 
   time_t start = time(NULL);
   graph_colorSCC(g);
   time_t end = time(NULL);
 
-  printf("colorSCC time: %fs\n", (double)(end - start));
+  printf("colorSCC time:\t %fs\n", (double)(end - start));
 
   int num_of_scc = 0;
   for (int i = 0; i < g->v; i++) {
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("Num of scc: %d\n", num_of_scc);
+  printf("Num of scc:\t %d\n", num_of_scc);
 
   return 0;
 }

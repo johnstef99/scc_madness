@@ -122,6 +122,7 @@ csx csc_from_file(char *path) {
 
   mm_write_banner(stdout, matcode);
   mm_write_mtx_crd_size(stdout, M, N, nz);
+  puts("--------------");
 
   return csc;
 }
