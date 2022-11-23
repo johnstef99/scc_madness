@@ -26,7 +26,7 @@ $(OBJ_DIR)/%.o: $(LIB_DIR)/%.c
 
 .PHONY: clean test run
 run:
-	./bin/scc assets/celegansneural.mtx
+	./bin/scc assets/mine.mtx
 
 clean:
 	rm -f $(OBJFILES) $(OUT)
