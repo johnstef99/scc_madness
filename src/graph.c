@@ -8,8 +8,6 @@
 #include "graph.h"
 #include "fifo.h"
 #include "node.h"
-#include <stddef.h>
-#include <stdlib.h>
 
 graph graph_new_from_csc(csx csc) {
   graph g = malloc(sizeof(struct Graph));
