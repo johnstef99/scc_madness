@@ -8,6 +8,7 @@
 #include "graph.h"
 #include "fifo.h"
 #include "node.h"
+#include <stdio.h>
 
 graph graph_new_from_csc(csx csc) {
   graph g = malloc(sizeof(struct Graph));
@@ -18,6 +19,7 @@ graph graph_new_from_csc(csx csc) {
   g->v = csc->v;
   g->e = csc->e;
   g->in = csc;
+  puts("Creating CSR..");
   g->out = csx_transpose(csc);
   g->removed = calloc(g->v, sizeof(bool));
   g->n_trimmed = 0;
