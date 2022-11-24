@@ -1,14 +1,13 @@
 /*
  *
  * Created by:   github.com/johnstef99
- * Last updated: 2022-11-22
+ * Last updated: 2022-11-23
  *
  */
 
 #include "graph.h"
 #include "fifo.h"
 #include "node.h"
-#include <stdio.h>
 
 graph graph_new_from_csc(csx csc) {
   graph g = malloc(sizeof(struct Graph));
@@ -53,21 +52,38 @@ size_t num_of_edges(csx edges, size_t v) {
   return edges->com[v + 1] - edges->com[v];
 }
 
+// clang-format off
 void graph_trim(graph g) {
-  for (size_t v = 0; v < g->v; v++) {
-    size_t in_degree = num_of_edges(g->in, v);
-    bool zero_in = in_degree == 0 || (in_degree == 1 && E(g->in, v, 0) == v);
+  size_t trimmed_per_thread;
 
-    size_t out_degree = g->out->com[v + 1] - g->out->com[v];
-    bool zero_out =
-        out_degree == 0 || (out_degree == 1 && E(g->out, v, 0) == v);
+  #pragma omp parallel private(trimmed_per_thread)
+  {
+    trimmed_per_thread = 0;
 
-    if (zero_in || zero_out) {
-      g->removed[v] = true;
-      g->n_trimmed++;
+    #pragma omp for
+    {
+      for (size_t v = 0; v < g->v; v++) {
+        size_t in_degree = num_of_edges(g->in, v);
+        bool zero_in =
+            in_degree == 0 || (in_degree == 1 && E(g->in, v, 0) == v);
+
+        size_t out_degree = g->out->com[v + 1] - g->out->com[v];
+        bool zero_out =
+            out_degree == 0 || (out_degree == 1 && E(g->out, v, 0) == v);
+
+        if (zero_in || zero_out) {
+          g->removed[v] = true;
+          trimmed_per_thread++;
+        }
+      }
+    }
+
+    #pragma omp critical
+    {
+      g->n_trimmed += trimmed_per_thread; 
     }
   }
-}
+} // clang-format on
 
 void graph_bfs(graph g, size_t entry, size_t *colors) {
   g->removed[entry] = true;
@@ -116,25 +132,40 @@ void graph_colorSCC(graph g) {
     }
 
     bool color_changed = true;
-    size_t u, w;
+    size_t w;
     while (color_changed) {
       color_changed = false;
-      for (u = 0; u < g->v; u++) {
-        if (!g->removed[u]) {
-          for (size_t j = g->out->com[u]; j < g->out->com[u + 1]; j++) {
-            w = g->out->unc[j];
-            if (colors[u] > colors[w]) {
-              color_changed = true;
-              colors[w] = colors[u];
+
+      // clang-format off
+      #pragma omp parallel private(w) shared(color_changed)
+      {
+        #pragma omp for // clang-format on
+        {
+          for (size_t u = 0; u < g->v; u++) {
+            if (!g->removed[u]) {
+              for (size_t j = g->out->com[u]; j < g->out->com[u + 1]; j++) {
+                w = g->out->unc[j];
+                if (colors[u] > colors[w]) {
+                  color_changed = true;
+                  colors[w] = colors[u];
+                }
+              }
             }
           }
         }
       }
     }
 
-    for (size_t i = 0; i < g->v; i++) {
-      if (!g->removed[i] && colors[i] == i) {
-        graph_bfs(g, colors[i], colors);
+    // clang-format off
+    #pragma omp parallel
+    {
+      #pragma omp for // clang-format on
+      {
+        for (size_t i = 0; i < g->v; i++) {
+          if (!g->removed[i] && colors[i] == i) {
+            graph_bfs(g, colors[i], colors);
+          }
+        }
       }
     }
   }
