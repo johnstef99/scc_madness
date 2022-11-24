@@ -20,6 +20,7 @@ graph graph_new_from_csc(csx csc) {
   g->v = csc->v;
   g->e = csc->e;
   g->in = csc;
+  printf("Creating CSR..\n");
   g->out = csx_transpose(csc);
   g->removed = calloc(g->v, sizeof(bool));
   g->n_trimmed = 0;
@@ -54,7 +55,7 @@ size_t num_of_edges(csx edges, size_t v) {
 }
 
 void graph_trim(graph g) {
-  for (size_t v = 0; v < g->v; v++) {
+  cilk_for (size_t v = 0; v < g->v; v++) {
     size_t in_degree = num_of_edges(g->in, v);
     bool zero_in = in_degree == 0 || (in_degree == 1 && E(g->in, v, 0) == v);
 

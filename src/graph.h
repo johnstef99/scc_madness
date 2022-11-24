@@ -37,7 +37,7 @@ struct Graph {
   size_t *scc_id;
 
   /* number to keep track of how many vertices have been trimmed */
-  size_t n_trimmed;
+  _Atomic size_t n_trimmed;
 };
 
 typedef struct Graph *graph;
