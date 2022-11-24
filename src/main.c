@@ -5,10 +5,10 @@
  *
  */
 
+#include <mach/mach_time.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "../libs/mmio.h"
 #include "csx.h"
@@ -23,16 +23,30 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  mach_timebase_info_data_t timeBase;
+  mach_timebase_info(&timeBase);
+  double timeConvert =
+      (double)timeBase.numer / (double)timeBase.denom / 1000000;
+
+  double start, elapsed;
+  start = (double)mach_continuous_time() * timeConvert;
+  elapsed = ((double)mach_continuous_time() * timeConvert) - start;
+
   csx csc = csc_from_file(argv[1]);
   graph g = graph_new_from_csc(csc);
+
+  start = (double)mach_continuous_time() * timeConvert;
   graph_trim(g);
+  elapsed = (((double)mach_continuous_time() * timeConvert) - start);
+
   printf("Trimmed:\t %zu vertices\n", g->n_trimmed);
+  printf("Trimming time:\t %f ms\n", (elapsed));
 
-  time_t start = time(NULL);
+  start = (double)mach_continuous_time() * timeConvert;
   graph_colorSCC(g);
-  time_t end = time(NULL);
+  elapsed = (((double)mach_continuous_time() * timeConvert) - start);
 
-  printf("colorSCC time:\t %fs\n", (double)(end - start));
+  printf("colorSCC time:\t %f ms\n", elapsed);
 
   int num_of_scc = 0;
   for (int i = 0; i < g->v; i++) {
