@@ -13,7 +13,7 @@ LIBFILES   = $(wildcard $(LIB_DIR)/*.c)
 OBJFILES = $(CFILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) $(LIBFILES:$(LIB_DIR)/%.c=$(OBJ_DIR)/%.o)
 OUT      = ./bin/scc
 
-CFLAGS = -Wall -g
+CFLAGS = -Wall -O3
 
 $(OUT): $(OBJFILES)
 	$(CC) -o $@ $^ 
