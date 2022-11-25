@@ -1,7 +1,7 @@
 /*
  *
  * Created by:   github.com/johnstef99
- * Last updated: 2022-11-18
+ * Last updated: 2022-11-25
  *
  */
 
@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "csx.h"
 #include "node.h"

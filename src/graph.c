@@ -1,9 +1,11 @@
 /*
  *
  * Created by:   github.com/johnstef99
- * Last updated: 2022-11-22
+ * Last updated: 2022-11-25
  *
  */
+
+#define NTHREADS 8
 
 #include "graph.h"
 
@@ -29,8 +31,16 @@ graph graph_new_from_csc(csx csc) {
   return g;
 }
 
-void graph_trim(graph g) {
-  for (size_t v = 0; v < g->v; v++) {
+typedef struct trim_params {
+  graph g;
+  size_t from, to, trimmed;
+} trim_params;
+
+void *_graph_trim(void *arg) {
+  trim_params *params = (trim_params *)arg;
+  graph g = params->g;
+  params->trimmed = 0;
+  for (size_t v = params->from; v < params->to; v++) {
     bool zero_in = true;
     for (size_t j = g->in->com[v]; j < g->in->com[v + 1]; j++) {
       if (g->in->unc[j] != v) {
@@ -49,8 +59,31 @@ void graph_trim(graph g) {
 
     if (zero_in || zero_out) {
       g->removed[v] = true;
-      g->n_trimmed++;
+      params->trimmed++;
     }
+  }
+  return NULL;
+}
+
+void graph_trim(graph g) {
+  pthread_t thread_id[NTHREADS];
+  trim_params *thread_param[NTHREADS];
+  int i;
+  size_t vert_per_thread = g->v / NTHREADS;
+  for (i = 0; i < NTHREADS; i++) {
+    thread_param[i] = malloc(sizeof(thread_param));
+    thread_param[i]->g = g;
+    thread_param[i]->from = i * vert_per_thread;
+    thread_param[i]->to = thread_param[i]->from + vert_per_thread;
+    if (i == NTHREADS - 1)
+      thread_param[i]->to += g->v % NTHREADS;
+    pthread_create(&thread_id[i], NULL, _graph_trim, (void *)thread_param[i]);
+  }
+
+  for (i = 0; i < NTHREADS; i++) {
+    pthread_join(thread_id[i], NULL);
+    g->n_trimmed += thread_param[i]->trimmed;
+    free(thread_param[i]);
   }
 }
 
@@ -91,6 +124,50 @@ bool graph_is_empty(graph g) {
   return true;
 }
 
+typedef struct change_color_args {
+  graph g;
+  size_t from, to;
+  size_t *colors;
+  bool *color_changed;
+} change_color_args;
+
+void *_change_color(void *args) {
+  change_color_args *ccags = (change_color_args *)args;
+  graph g = ccags->g;
+  size_t *colors = ccags->colors;
+  size_t w;
+  for (size_t u = ccags->from; u < ccags->to; u++) {
+    if (!g->removed[u]) {
+      for (size_t j = g->out->com[u]; j < g->out->com[u + 1]; j++) {
+        w = g->out->unc[j];
+        if (colors[u] > colors[w]) {
+          *ccags->color_changed = true;
+          colors[w] = colors[u];
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
+typedef struct bfs_args {
+  graph g;
+  size_t from, to;
+  size_t *colors;
+} bfs_args;
+
+void *_graph_bfs(void *args) {
+  bfs_args *bfsa = (bfs_args *)args;
+  graph g = bfsa->g;
+  size_t *colors = bfsa->colors;
+  for (size_t i = bfsa->from; i < bfsa->to; i++) {
+    if (!g->removed[i] && colors[i] == i) {
+      graph_bfs(g, colors[i], colors);
+    }
+  }
+  return NULL;
+}
+
 void graph_colorSCC(graph g) {
   size_t *colors = malloc(g->v * sizeof(size_t));
 
@@ -103,27 +180,46 @@ void graph_colorSCC(graph g) {
       }
     }
 
+    pthread_t thread_id[NTHREADS];
+    size_t vert_per_thread = g->v / NTHREADS;
+
+    change_color_args *ccargs[NTHREADS];
     bool color_changed = true;
-    size_t u, w;
     while (color_changed) {
       color_changed = false;
-      for (u = 0; u < g->v; u++) {
-        if (!g->removed[u]) {
-          for (size_t j = g->out->com[u]; j < g->out->com[u + 1]; j++) {
-            w = g->out->unc[j];
-            if (colors[u] > colors[w]) {
-              color_changed = true;
-              colors[w] = colors[u];
-            }
-          }
-        }
+      for (int i = 0; i < NTHREADS; i++) {
+        ccargs[i] = malloc(sizeof(change_color_args));
+        ccargs[i]->g = g;
+        ccargs[i]->colors = colors;
+        ccargs[i]->color_changed = &color_changed;
+        ccargs[i]->from = i * vert_per_thread;
+        ccargs[i]->to = ccargs[i]->from + vert_per_thread;
+        if (i == NTHREADS - 1)
+          ccargs[i]->to += g->v % NTHREADS;
+        pthread_create(&thread_id[i], NULL, _change_color, ccargs[i]);
+      }
+
+      for (int i = 0; i < NTHREADS; i++) {
+        pthread_join(thread_id[i], NULL);
+        free(ccargs[i]);
       }
     }
 
-    for (size_t i = 0; i < g->v; i++) {
-      if (!g->removed[i] && colors[i] == i) {
-        graph_bfs(g, colors[i], colors);
-      }
+    bfs_args *bfsa[NTHREADS];
+    for (int i = 0; i < NTHREADS; i++) {
+      bfsa[i] = malloc(sizeof(bfs_args));
+      bfsa[i]->g = g;
+      bfsa[i]->colors = colors;
+      bfsa[i]->from = i * vert_per_thread;
+      bfsa[i]->to = bfsa[i]->from + vert_per_thread;
+      if (i == NTHREADS - 1)
+        bfsa[i]->to += g->v % NTHREADS;
+      pthread_create(&thread_id[i], NULL, _graph_bfs, bfsa[i]);
+    }
+
+    for (int i = 0; i < NTHREADS; i++) {
+      pthread_join(thread_id[i], NULL);
+      free(bfsa[i]);
     }
   }
 
