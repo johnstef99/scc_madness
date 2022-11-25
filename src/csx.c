@@ -6,8 +6,6 @@
  */
 
 #include "csx.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 csx csx_new(size_t vertices, size_t edges) {
   csx csc = malloc(sizeof(struct CSX));
