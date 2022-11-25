@@ -76,26 +76,29 @@ void graph_trim(graph g) {
 void graph_bfs(graph g, size_t entry, size_t *colors) {
   g->removed[entry] = true;
 
-  fifo q = fifo_new();
+  size_t *fifo = malloc(g->e * sizeof(size_t));
+  size_t head = 0;
+  size_t tail = 0;
+
   for (size_t j = g->in->com[entry]; j < g->in->com[entry + 1]; j++) {
-    fifo_enqueue(q, &g->in->unc[j], sizeof(size_t));
+    fifo[tail++] = g->in->unc[j];
   }
 
-  size_t *vi = malloc(sizeof(size_t));
-  while (!fifo_is_empty(q)) {
-    fifo_dequeue(q, vi, sizeof(size_t));
+  size_t vi;
+  while (head < tail) {
+    vi = fifo[head++];
 
-    if (!g->removed[*vi] && colors[*vi] == entry) {
-      g->removed[*vi] = true;
-      g->scc_id[*vi] = entry;
+    if (!g->removed[vi] && colors[vi] == entry) {
+      g->removed[vi] = true;
+      g->scc_id[vi] = entry;
 
-      for (size_t j = g->in->com[*vi]; j < g->in->com[*vi + 1]; j++) {
-        fifo_enqueue(q, &g->in->unc[j], sizeof(size_t));
+      for (size_t j = g->in->com[vi]; j < g->in->com[vi + 1]; j++) {
+        fifo[tail++] = g->in->unc[j];
       }
     }
   }
 
-  free(vi);
+  free(fifo);
   return;
 }
 
