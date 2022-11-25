@@ -8,7 +8,6 @@
 #include "graph.h"
 #include "fifo.h"
 #include "node.h"
-#include <stdio.h>
 
 graph graph_new_from_csc(csx csc) {
   graph g = malloc(sizeof(struct Graph));
@@ -49,18 +48,23 @@ size_t E(csx edges, size_t i, size_t j) {
   return edges->unc[edges->com[i] + j];
 }
 
-size_t num_of_edges(csx edges, size_t v) {
-  return edges->com[v + 1] - edges->com[v];
-}
-
 void graph_trim(graph g) {
   for (size_t v = 0; v < g->v; v++) {
-    size_t in_degree = num_of_edges(g->in, v);
-    bool zero_in = in_degree == 0 || (in_degree == 1 && E(g->in, v, 0) == v);
+    bool zero_in = true;
+    for (size_t j = g->in->com[v]; j < g->in->com[v + 1]; j++) {
+      if (g->in->unc[j] != v) {
+        zero_in = false;
+        break;
+      }
+    }
 
-    size_t out_degree = g->out->com[v + 1] - g->out->com[v];
-    bool zero_out =
-        out_degree == 0 || (out_degree == 1 && E(g->out, v, 0) == v);
+    bool zero_out = true;
+    for (size_t j = g->out->com[v]; j < g->out->com[v + 1]; j++) {
+      if (g->out->unc[j] != v) {
+        zero_out = false;
+        break;
+      }
+    }
 
     if (zero_in || zero_out) {
       g->removed[v] = true;
