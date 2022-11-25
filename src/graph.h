@@ -13,7 +13,6 @@
 #include <stdlib.h>
 
 #include "csx.h"
-#include "fifo.h"
 #include "node.h"
 
 struct Graph {

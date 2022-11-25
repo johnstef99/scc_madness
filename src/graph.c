@@ -5,11 +5,10 @@
  *
  */
 
-#include "graph.h"
-#include "fifo.h"
-#include "node.h"
-
 #include <cilk/cilk.h>
+
+#include "graph.h"
+
 
 graph graph_new_from_csc(csx csc) {
   graph g = malloc(sizeof(struct Graph));
@@ -31,23 +30,6 @@ graph graph_new_from_csc(csx csc) {
   }
 
   return g;
-}
-
-/*
- * Returns the edge[j] of vertice i. This function doesn't check if the vertice
- * i has j amount of vertices, this check should be done before calling it.
- * For example:
- *
- * E(out_edges, 4, 0) -> will return the first vertice that vertice 4 points to.
- *
- * matrix: CSC/CSX matrix to get the data from
- * i: the vertice
- * j: the index of the edge
- *
- * returns: the vertice that points or is pointed from vertice i
- */
-size_t E(csx edges, size_t i, size_t j) {
-  return edges->unc[edges->com[i] + j];
 }
 
 void graph_trim(graph g) {
