@@ -6,6 +6,8 @@
  */
 
 #include "csx.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 csx csx_new(size_t vertices, size_t edges) {
   csx csc = malloc(sizeof(struct CSX));
@@ -59,19 +61,20 @@ csx csx_transpose(csx original) {
 }
 
 void csx_print(csx matrix) {
-  for (size_t i = 0; i < matrix->e; i++) {
+  size_t lim = 10;
+  for (size_t i = 0; i < lim; i++) {
     printf("%3lu ", i);
   }
   puts("");
-  for (size_t i = 0; i < matrix->e; i++) {
+  for (size_t i = 0; i < lim; i++) {
     printf("----");
   }
   puts("");
-  for (size_t i = 0; i < matrix->v + 1; i++) {
+  for (size_t i = 0; i < lim + 1; i++) {
     printf("%3lu ", matrix->com[i]);
   }
   puts("");
-  for (size_t i = 0; i < matrix->e; i++) {
+  for (size_t i = 0; i < lim; i++) {
     printf("%3lu ", matrix->unc[i]);
   }
   puts("");
@@ -106,16 +109,21 @@ csx csc_from_file(char *path) {
     exit(1);
 
   size_t a, b;
-  size_t ci = 0;
+  size_t id = 0;
   csx csc = csx_new(M, nz);
   for (size_t i = 0; i < nz; i++) {
     fscanf(f, "%zu %zu\n", &a, &b);
-    if (ci != b - 1) {
-      csc->com[++ci] = i;
+    a--;
+    b--;
+
+    while (id <= b) {
+      csc->com[id] = i;
+      id++;
     }
-    csc->unc[i] = a - 1;
+
+    csc->unc[i] = a;
   }
-  csc->com[++ci] = nz;
+  csc->com[id] = nz;
 
   if (f != stdin)
     fclose(f);
