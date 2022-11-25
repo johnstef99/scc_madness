@@ -48,10 +48,6 @@ size_t E(csx edges, size_t i, size_t j) {
   return edges->unc[edges->com[i] + j];
 }
 
-size_t num_of_edges(csx edges, size_t v) {
-  return edges->com[v + 1] - edges->com[v];
-}
-
 // clang-format off
 void graph_trim(graph g) {
   size_t trimmed_per_thread;
@@ -63,13 +59,22 @@ void graph_trim(graph g) {
     #pragma omp for
     {
       for (size_t v = 0; v < g->v; v++) {
-        size_t in_degree = num_of_edges(g->in, v);
-        bool zero_in =
-            in_degree == 0 || (in_degree == 1 && E(g->in, v, 0) == v);
 
-        size_t out_degree = g->out->com[v + 1] - g->out->com[v];
-        bool zero_out =
-            out_degree == 0 || (out_degree == 1 && E(g->out, v, 0) == v);
+        bool zero_in = true;
+        for (size_t j = g->in->com[v]; j < g->in->com[v + 1]; j++) {
+          if (g->in->unc[j] != v) {
+            zero_in = false;
+            break;
+          }
+        }
+
+        bool zero_out = true;
+        for (size_t j = g->out->com[v]; j < g->out->com[v + 1]; j++) {
+          if (g->out->unc[j] != v) {
+            zero_out = false;
+            break;
+          }
+        }
 
         if (zero_in || zero_out) {
           g->removed[v] = true;
@@ -79,35 +84,36 @@ void graph_trim(graph g) {
     }
 
     #pragma omp critical
-    {
-      g->n_trimmed += trimmed_per_thread; 
-    }
+    { g->n_trimmed += trimmed_per_thread; }
   }
 } // clang-format on
 
 void graph_bfs(graph g, size_t entry, size_t *colors) {
   g->removed[entry] = true;
 
-  fifo q = fifo_new();
+  size_t *fifo = malloc(g->e * sizeof(size_t));
+  size_t head = 0;
+  size_t tail = 0;
+
   for (size_t j = g->in->com[entry]; j < g->in->com[entry + 1]; j++) {
-    fifo_enqueue(q, &g->in->unc[j], sizeof(size_t));
+    fifo[tail++] = g->in->unc[j];
   }
 
-  size_t *vi = malloc(sizeof(size_t));
-  while (!fifo_is_empty(q)) {
-    fifo_dequeue(q, vi, sizeof(size_t));
+  size_t vi;
+  while (head < tail) {
+    vi = fifo[head++];
 
-    if (!g->removed[*vi] && colors[*vi] == entry) {
-      g->removed[*vi] = true;
-      g->scc_id[*vi] = entry;
+    if (!g->removed[vi] && colors[vi] == entry) {
+      g->removed[vi] = true;
+      g->scc_id[vi] = entry;
 
-      for (size_t j = g->in->com[*vi]; j < g->in->com[*vi + 1]; j++) {
-        fifo_enqueue(q, &g->in->unc[j], sizeof(size_t));
+      for (size_t j = g->in->com[vi]; j < g->in->com[vi + 1]; j++) {
+        fifo[tail++] = g->in->unc[j];
       }
     }
   }
 
-  free(vi);
+  free(fifo);
   return;
 }
 
