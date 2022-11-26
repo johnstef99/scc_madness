@@ -25,9 +25,6 @@ struct Graph {
   /* graph's representation in CSC*/
   csx in;
 
-  /* graph's representation in CSR*/
-  csx out;
-
   /* mask to keep which vertices have been removed */
   bool *removed;
 
