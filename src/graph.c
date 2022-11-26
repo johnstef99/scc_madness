@@ -167,7 +167,7 @@ void *_change_color(void *args) {
         w = g->in->unc[j];
         if (g->removed[w])
           continue;
-        if (colors[w] > colors[u]) {
+        if (colors[w] < colors[u]) {
           *ccags->color_changed = true;
           colors[u] = colors[w];
         }
