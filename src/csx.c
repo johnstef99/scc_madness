@@ -110,7 +110,7 @@ csx csc_from_file(char *path) {
   size_t id = 0;
   csx csc = csx_new(M, nz);
   for (size_t i = 0; i < nz; i++) {
-    fscanf(f, "%zu %zu\n", &a, &b);
+    fscanf(f, "%zu %zu%*[ ]%*f\n", &a, &b);
     a--;
     b--;
 
