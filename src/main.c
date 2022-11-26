@@ -5,10 +5,11 @@
  *
  */
 
-#include <mach/mach_time.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "../libs/mmio.h"
 #include "csx.h"
@@ -16,39 +17,42 @@
 #include "graph.h"
 #include "node.h"
 
+double get_elapsed(struct timespec start, struct timespec end) {
+  return (double)(end.tv_sec - start.tv_sec) * 1000 +
+         (double)(end.tv_nsec - start.tv_nsec) / 1000000;
+}
+
 int main(int argc, char *argv[]) {
+
 
   if (argc < 2) {
     fprintf(stderr, "Usage: %s [martix-market-filename]\n", argv[0]);
     exit(1);
   }
 
-  mach_timebase_info_data_t timeBase;
-  mach_timebase_info(&timeBase);
-  double timeConvert =
-      (double)timeBase.numer / (double)timeBase.denom / 1000000;
+  struct timespec start, end;
+  double elapsed;
 
-  double start, elapsed;
-  start = (double)mach_continuous_time() * timeConvert;
-  elapsed = ((double)mach_continuous_time() * timeConvert) - start;
-
-  start = (double)mach_continuous_time() * timeConvert;
+  clock_gettime(CLOCK_MONOTONIC, &start);
   csx csc = csc_from_file(argv[1]);
-  elapsed = (((double)mach_continuous_time() * timeConvert) - start);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  elapsed = get_elapsed(start, end);
   printf("MTX to CSC time: %f ms\n", (elapsed));
 
   graph g = graph_new_from_csc(csc);
 
-  start = (double)mach_continuous_time() * timeConvert;
+  clock_gettime(CLOCK_MONOTONIC, &start);
   graph_trim(g);
-  elapsed = (((double)mach_continuous_time() * timeConvert) - start);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  elapsed = get_elapsed(start, end);
 
   printf("Trimmed:\t %zu vertices\n", g->n_trimmed);
   printf("Trimming time:\t %f ms\n", (elapsed));
 
-  start = (double)mach_continuous_time() * timeConvert;
+  clock_gettime(CLOCK_MONOTONIC, &start);
   graph_colorSCC(g);
-  elapsed = (((double)mach_continuous_time() * timeConvert) - start);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  elapsed = get_elapsed(start, end);
 
   printf("colorSCC time:\t %f ms\n", elapsed);
 
