@@ -18,8 +18,6 @@ graph graph_new_from_csc(csx csc) {
   g->v = csc->v;
   g->e = csc->e;
   g->in = csc;
-  puts("Creating CSR..");
-  g->out = csx_transpose(csc);
   g->removed = calloc(g->v, sizeof(bool));
   g->n_trimmed = 0;
 
@@ -34,30 +32,35 @@ graph graph_new_from_csc(csx csc) {
 typedef struct trim_params {
   graph g;
   size_t from, to, trimmed;
+  bool *has_in;
+  bool *has_out;
 } trim_params;
 
 void *_graph_trim(void *arg) {
   trim_params *params = (trim_params *)arg;
   graph g = params->g;
-  params->trimmed = 0;
+  bool *has_in = params->has_in;
+  bool *has_out = params->has_out;
   for (size_t v = params->from; v < params->to; v++) {
-    bool zero_in = true;
     for (size_t j = g->in->com[v]; j < g->in->com[v + 1]; j++) {
-      if (g->in->unc[j] != v) {
-        zero_in = false;
-        break;
+      if (!g->removed[v] && g->in->unc[j] != v) {
+        has_in[v] = true;
+        has_out[g->in->unc[j]] = true;
       }
     }
+  }
+  return NULL;
+}
 
-    bool zero_out = true;
-    for (size_t j = g->out->com[v]; j < g->out->com[v + 1]; j++) {
-      if (g->out->unc[j] != v) {
-        zero_out = false;
-        break;
-      }
-    }
+void *_check_and_remove(void *args) {
+  trim_params *params = (trim_params *)args;
+  graph g = params->g;
+  params->trimmed = 0;
+  bool *has_in = params->has_in;
+  bool *has_out = params->has_out;
 
-    if (zero_in || zero_out) {
+  for (size_t v = params->from; v < params->to; v++) {
+    if (!has_in[v] || !has_out[v]) {
       g->removed[v] = true;
       params->trimmed++;
     }
@@ -65,25 +68,47 @@ void *_graph_trim(void *arg) {
   return NULL;
 }
 
-void graph_trim(graph g) {
+void graph_trim(graph g, int repeat) {
   pthread_t thread_id[NTHREADS];
   trim_params *thread_param[NTHREADS];
-  int i;
   size_t vert_per_thread = g->v / NTHREADS;
-  for (i = 0; i < NTHREADS; i++) {
-    thread_param[i] = malloc(sizeof(thread_param));
-    thread_param[i]->g = g;
-    thread_param[i]->from = i * vert_per_thread;
-    thread_param[i]->to = thread_param[i]->from + vert_per_thread;
-    if (i == NTHREADS - 1)
-      thread_param[i]->to += g->v % NTHREADS;
-    pthread_create(&thread_id[i], NULL, _graph_trim, (void *)thread_param[i]);
-  }
+  int i;
 
-  for (i = 0; i < NTHREADS; i++) {
-    pthread_join(thread_id[i], NULL);
-    g->n_trimmed += thread_param[i]->trimmed;
-    free(thread_param[i]);
+  size_t trimmed_by_repeat = 0;
+  for (int r = 0; r < repeat; r++) {
+    bool *has_in = calloc(g->v, sizeof(bool));
+    bool *has_out = calloc(g->v, sizeof(bool));
+    for (i = 0; i < NTHREADS; i++) {
+      thread_param[i] = malloc(sizeof(thread_param));
+      thread_param[i]->g = g;
+      thread_param[i]->has_in = has_in;
+      thread_param[i]->has_out = has_out;
+      thread_param[i]->from = i * vert_per_thread;
+      thread_param[i]->to = thread_param[i]->from + vert_per_thread;
+      if (i == NTHREADS - 1)
+        thread_param[i]->to += g->v % NTHREADS;
+      pthread_create(&thread_id[i], NULL, _graph_trim, (void *)thread_param[i]);
+    }
+
+    for (i = 0; i < NTHREADS; i++) {
+      pthread_join(thread_id[i], NULL);
+    }
+
+    for (i = 0; i < NTHREADS; i++) {
+      pthread_create(&thread_id[i], NULL, _check_and_remove,
+                     (void *)thread_param[i]);
+    }
+
+    for (i = 0; i < NTHREADS; i++) {
+      pthread_join(thread_id[i], NULL);
+      trimmed_by_repeat += thread_param[i]->trimmed;
+      free(thread_param[i]);
+    }
+    g->n_trimmed = trimmed_by_repeat;
+    free(has_in);
+    free(has_out);
+    if (trimmed_by_repeat == 0)
+      break;
   }
 }
 
@@ -138,11 +163,13 @@ void *_change_color(void *args) {
   size_t w;
   for (size_t u = ccags->from; u < ccags->to; u++) {
     if (!g->removed[u]) {
-      for (size_t j = g->out->com[u]; j < g->out->com[u + 1]; j++) {
-        w = g->out->unc[j];
-        if (colors[u] > colors[w]) {
+      for (size_t j = g->in->com[u]; j < g->in->com[u + 1]; j++) {
+        w = g->in->unc[j];
+        if (g->removed[w])
+          continue;
+        if (colors[w] > colors[u]) {
           *ccags->color_changed = true;
-          colors[w] = colors[u];
+          colors[u] = colors[w];
         }
       }
     }

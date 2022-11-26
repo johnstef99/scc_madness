@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   graph g = graph_new_from_csc(csc);
 
   start = (double)mach_continuous_time() * timeConvert;
-  graph_trim(g);
+  graph_trim(g, 1);
   elapsed = (((double)mach_continuous_time() * timeConvert) - start);
 
   printf("Trimmed:\t %zu vertices\n", g->n_trimmed);
