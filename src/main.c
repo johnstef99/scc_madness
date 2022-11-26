@@ -32,7 +32,11 @@ int main(int argc, char *argv[]) {
   start = (double)mach_continuous_time() * timeConvert;
   elapsed = ((double)mach_continuous_time() * timeConvert) - start;
 
+  start = (double)mach_continuous_time() * timeConvert;
   csx csc = csc_from_file(argv[1]);
+  elapsed = (((double)mach_continuous_time() * timeConvert) - start);
+  printf("MTX to CSC time: %f ms\n", (elapsed));
+
   graph g = graph_new_from_csc(csc);
 
   start = (double)mach_continuous_time() * timeConvert;
