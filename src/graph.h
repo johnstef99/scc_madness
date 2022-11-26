@@ -25,9 +25,6 @@ struct Graph {
   /* graph's representation in CSC*/
   csx in;
 
-  /* graph's representation in CSR*/
-  csx out;
-
   /* mask to keep which vertices have been removed */
   bool *removed;
 
@@ -43,11 +40,7 @@ typedef struct Graph *graph;
 
 graph graph_new_from_csc(csx csc);
 
-graph graph_new(size_t vertices, size_t edges);
-
 void graph_trim(graph g);
-
-uint8_t graph_add_edge(graph g, size_t s, size_t d);
 
 void graph_bfs(graph g, size_t entry, size_t *colors);
 

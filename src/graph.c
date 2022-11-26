@@ -9,7 +9,6 @@
 
 #include "graph.h"
 
-
 graph graph_new_from_csc(csx csc) {
   graph g = malloc(sizeof(struct Graph));
   if (!g) {
@@ -19,8 +18,6 @@ graph graph_new_from_csc(csx csc) {
   g->v = csc->v;
   g->e = csc->e;
   g->in = csc;
-  printf("Creating CSR..\n");
-  g->out = csx_transpose(csc);
   g->removed = calloc(g->v, sizeof(bool));
   g->n_trimmed = 0;
 
@@ -33,28 +30,25 @@ graph graph_new_from_csc(csx csc) {
 }
 
 void graph_trim(graph g) {
+  bool *has_in = calloc(g->v, sizeof(bool));
+  bool *has_out = calloc(g->v, sizeof(bool));
   cilk_for(size_t v = 0; v < g->v; v++) {
-    bool zero_in = true;
     for (size_t j = g->in->com[v]; j < g->in->com[v + 1]; j++) {
-      if (g->in->unc[j] != v) {
-        zero_in = false;
-        break;
+      if (!g->removed[v] && g->in->unc[j] != v) {
+        has_in[v] = true;
+        has_out[g->in->unc[j]] = true;
       }
     }
+  }
 
-    bool zero_out = true;
-    for (size_t j = g->out->com[v]; j < g->out->com[v + 1]; j++) {
-      if (g->out->unc[j] != v) {
-        zero_out = false;
-        break;
-      }
-    }
-
-    if (zero_in || zero_out) {
+  cilk_for(size_t v = 0; v < g->v; v++) {
+    if (!has_in[v] || !has_out[v]) {
       g->removed[v] = true;
       g->n_trimmed++;
     }
   }
+  free(has_in);
+  free(has_out);
 }
 
 void graph_bfs(graph g, size_t entry, size_t *colors) {
@@ -112,10 +106,11 @@ void graph_colorSCC(graph g) {
       color_changed = false;
       cilk_for(size_t u = 0; u < g->v; u++) {
         if (!g->removed[u]) {
-          for (size_t j = g->out->com[u]; j < g->out->com[u + 1]; j++) {
-            w = g->out->unc[j];
-            if (colors[u] > colors[w]) {
-              colors[w] = colors[u];
+          for (size_t j = g->in->com[u]; j < g->in->com[u + 1]; j++) {
+            w = g->in->unc[j];
+            if(g->removed[w]) continue;
+            if (colors[w] < colors[u]) {
+              colors[u] = colors[w];
               color_changed = true;
             }
           }
