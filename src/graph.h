@@ -14,7 +14,6 @@
 #include <omp.h>
 
 #include "csx.h"
-#include "node.h"
 
 struct Graph {
   /* graph's number of vertices */
@@ -40,6 +39,8 @@ struct Graph {
 typedef struct Graph *graph;
 
 graph graph_new_from_csc(csx csc);
+
+void graph_free(graph g);
 
 void graph_trim(graph g);
 

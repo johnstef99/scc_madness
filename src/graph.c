@@ -27,6 +27,13 @@ graph graph_new_from_csc(csx csc) {
   return g;
 }
 
+void graph_free(graph g) {
+  free(g->in);
+  free(g->removed);
+  free(g->scc_id);
+  free(g);
+}
+
 // clang-format off
 void graph_trim(graph g) {
   size_t trimmed_per_thread;
