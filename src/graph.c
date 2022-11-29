@@ -29,6 +29,13 @@ graph graph_new_from_csc(csx csc) {
   return g;
 }
 
+void graph_free(graph g) {
+  free(g->in);
+  free(g->removed);
+  free(g->scc_id);
+  free(g);
+}
+
 typedef struct trim_params {
   graph g;
   size_t from, to, trimmed;
