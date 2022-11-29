@@ -11,8 +11,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cilk/cilk.h>
 
 #include "csx.h"
+
+void size_t_zero(void *view); 
+void size_t_add(void *left, void *right);
+void size_t_destroy(void *view);
 
 struct Graph {
   /* graph's number of vertices */
@@ -31,8 +36,9 @@ struct Graph {
    * belong to the same SCC)*/
   size_t *scc_id;
 
-  /* number to keep track of how many vertices have been trimmed */
-  _Atomic size_t n_trimmed;
+  /* number to keep track of how many vertices have been trimmed (it's a
+   * cilk_reducer)*/
+  size_t cilk_reducer(size_t_zero, size_t_add)* n_trimmed;
 };
 
 typedef struct Graph *graph;

@@ -5,9 +5,15 @@
  *
  */
 
-#include <cilk/cilk.h>
-
 #include "graph.h"
+
+void size_t_zero(void *view) { *(size_t *)view = 0; }
+void size_t_add(void *left, void *right) {
+  *(size_t *)left += *(size_t *)right;
+}
+void size_t_destroy(void *view) { free(view); }
+
+size_t cilk_reducer(size_t_zero, size_t_add) trimmed_red = 0;
 
 graph graph_new_from_csc(csx csc) {
   graph g = malloc(sizeof(struct Graph));
@@ -19,7 +25,7 @@ graph graph_new_from_csc(csx csc) {
   g->e = csc->e;
   g->in = csc;
   g->removed = calloc(g->v, sizeof(bool));
-  g->n_trimmed = 0;
+  g->n_trimmed = __builtin_addressof(trimmed_red);
 
   g->scc_id = malloc(g->v * sizeof(size_t));
   for (size_t i = 0; i < g->v; i++) {
@@ -51,7 +57,7 @@ void graph_trim(graph g) {
   cilk_for(size_t v = 0; v < g->v; v++) {
     if (!has_in[v] || !has_out[v]) {
       g->removed[v] = true;
-      g->n_trimmed++;
+      *(g->n_trimmed) += 1;
     }
   }
   free(has_in);
@@ -95,6 +101,10 @@ bool graph_is_empty(graph g) {
   return true;
 }
 
+void bool_false(void *view) { *(bool *)view = false; }
+void bool_or(void *left, void *right) { *(bool *)left |= *(bool *)right; }
+void bool_destroy(void *view) { free(view); }
+
 void graph_colorSCC(graph g) {
   size_t *colors = malloc(g->v * sizeof(size_t));
 
@@ -107,7 +117,7 @@ void graph_colorSCC(graph g) {
       }
     }
 
-    _Atomic bool color_changed = true;
+    bool cilk_reducer(bool_false, bool_or) color_changed = true;
     size_t w;
     while (color_changed) {
       color_changed = false;
@@ -115,10 +125,11 @@ void graph_colorSCC(graph g) {
         if (!g->removed[u]) {
           for (size_t j = g->in->com[u]; j < g->in->com[u + 1]; j++) {
             w = g->in->unc[j];
-            if(g->removed[w]) continue;
+            if (g->removed[w])
+              continue;
             if (colors[w] < colors[u]) {
               colors[u] = colors[w];
-              color_changed = true;
+              color_changed |= true;
             }
           }
         }

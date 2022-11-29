@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   clock_gettime(CLOCK_MONOTONIC, &end);
   trimming = get_elapsed(start, end);
 
-  printf("Trimmed:\t %zu vertices\n", g->n_trimmed);
+  printf("Trimmed:\t %zu vertices\n", *(g->n_trimmed));
   printf("Trimming time:\t %f ms\n", (trimming));
 
   /* Find SCC using coloring algorithm */
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
   printf("Num of scc:\t %d\n", num_of_scc);
 
   /* Useful output for logging */
-  printf("%f %zu %f %f %d\n", trimming, g->n_trimmed, coloring,
+  printf("%f %zu %f %f %d\n", trimming, *(g->n_trimmed), coloring,
          trimming + coloring, num_of_scc);
 
   graph_free(g);
