@@ -29,6 +29,13 @@ graph graph_new_from_csc(csx csc) {
   return g;
 }
 
+void graph_free(graph g) {
+  free(g->in);
+  free(g->removed);
+  free(g->scc_id);
+  free(g);
+}
+
 void graph_trim(graph g) {
   bool *has_in = calloc(g->v, sizeof(bool));
   bool *has_out = calloc(g->v, sizeof(bool));
