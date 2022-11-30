@@ -16,10 +16,21 @@ graph graph_new_from_csc(csx csc) {
   g->v = csc->v;
   g->e = csc->e;
   g->in = csc;
+
   g->removed = calloc(g->v, sizeof(bool));
+  if (!g->removed) {
+    fprintf(stderr, "Couldn't allocate removed array\n");
+    exit(1);
+  }
+
   g->n_trimmed = 0;
 
   g->scc_id = malloc(g->v * sizeof(size_t));
+  if (!g->scc_id) {
+    fprintf(stderr, "Couldn't allocate scc_id array\n");
+    exit(1);
+  }
+
   for (size_t i = 0; i < g->v; i++) {
     g->scc_id[i] = i;
   }
@@ -38,7 +49,16 @@ void graph_free(graph g) {
 void graph_trim(graph g) {
   size_t trimmed_per_thread;
   bool *has_in = calloc(g->v, sizeof(bool));
+  if (!has_in) {
+    fprintf(stderr, "Couldn't allocate has_in array\n");
+    exit(1);
+  }
+
   bool *has_out = calloc(g->v, sizeof(bool));
+  if (!has_out) {
+    fprintf(stderr, "Couldn't allocate has_out array\n");
+    exit(1);
+  }
 
   #pragma omp parallel private(trimmed_per_thread) shared(has_in, has_out)
   {
@@ -78,6 +98,11 @@ void graph_bfs(graph g, size_t entry, size_t *colors) {
   g->removed[entry] = true;
 
   size_t *fifo = malloc(g->e * sizeof(size_t));
+  if(!fifo){
+    fprintf(stderr, "Couldn't allocate fifo array\n");
+    exit(1);
+  }
+
   size_t head = 0;
   size_t tail = 0;
 
@@ -113,6 +138,10 @@ bool graph_is_empty(graph g) {
 
 void graph_colorSCC(graph g) {
   size_t *colors = malloc(g->v * sizeof(size_t));
+  if(!colors){
+    fprintf(stderr, "Couldn't allocate colors array\n");
+    exit(1);
+  }
 
   while (!graph_is_empty(g)) {
     for (size_t v = 0; v < g->v; v++) {
