@@ -24,10 +24,21 @@ graph graph_new_from_csc(csx csc) {
   g->v = csc->v;
   g->e = csc->e;
   g->in = csc;
+
   g->removed = calloc(g->v, sizeof(bool));
+  if (!g->removed) {
+    fprintf(stderr, "Couldn't allocate removed array\n");
+    exit(1);
+  }
+
   g->n_trimmed = __builtin_addressof(trimmed_red);
 
   g->scc_id = malloc(g->v * sizeof(size_t));
+  if (!g->scc_id) {
+    fprintf(stderr, "Couldn't allocate scc_id array\n");
+    exit(1);
+  }
+
   for (size_t i = 0; i < g->v; i++) {
     g->scc_id[i] = i;
   }
@@ -44,7 +55,17 @@ void graph_free(graph g) {
 
 void graph_trim(graph g) {
   bool *has_in = calloc(g->v, sizeof(bool));
+  if (!has_in) {
+    fprintf(stderr, "Couldn't allocate has_in array\n");
+    exit(1);
+  }
+
   bool *has_out = calloc(g->v, sizeof(bool));
+  if (!has_out) {
+    fprintf(stderr, "Couldn't allocate has_out array\n");
+    exit(1);
+  }
+
   cilk_for(size_t v = 0; v < g->v; v++) {
     for (size_t j = g->in->com[v]; j < g->in->com[v + 1]; j++) {
       if (!g->removed[v] && g->in->unc[j] != v) {
@@ -68,6 +89,11 @@ void graph_bfs(graph g, size_t entry, size_t *colors) {
   g->removed[entry] = true;
 
   size_t *fifo = malloc(g->e * sizeof(size_t));
+  if(!fifo){
+    fprintf(stderr, "Couldn't allocate fifo array\n");
+    exit(1);
+  }
+
   size_t head = 0;
   size_t tail = 0;
 
@@ -107,6 +133,10 @@ void bool_destroy(void *view) { free(view); }
 
 void graph_colorSCC(graph g) {
   size_t *colors = malloc(g->v * sizeof(size_t));
+  if(!colors){
+    fprintf(stderr, "Couldn't allocate colors array\n");
+    exit(1);
+  }
 
   while (!graph_is_empty(g)) {
     for (size_t v = 0; v < g->v; v++) {
