@@ -58,17 +58,8 @@ void *_graph_trim(void *arg) {
   trim_params *params = (trim_params *)arg;
   graph g = params->g;
 
-  bool *has_in = calloc(g->v, sizeof(bool));
-  if (!has_in) {
-    fprintf(stderr, "Couldn't allocate has_in array\n");
-    exit(1);
-  }
-
-  bool *has_out = calloc(g->v, sizeof(bool));
-  if (!has_out) {
-    fprintf(stderr, "Couldn't allocate has_out array\n");
-    exit(1);
-  }
+  bool *has_in = params->has_in;
+  bool *has_out = params->has_out;
 
   for (size_t v = params->from; v < params->to; v++) {
     for (size_t j = g->in->com[v]; j < g->in->com[v + 1]; j++) {
@@ -106,7 +97,15 @@ void graph_trim(graph g, int repeat) {
   size_t trimmed_by_repeat = 0;
   for (int r = 0; r < repeat; r++) {
     bool *has_in = calloc(g->v, sizeof(bool));
+    if (!has_in) {
+      fprintf(stderr, "Couldn't allocate has_in array\n");
+      exit(1);
+    }
     bool *has_out = calloc(g->v, sizeof(bool));
+    if (!has_out) {
+      fprintf(stderr, "Couldn't allocate has_out array\n");
+      exit(1);
+    }
     for (i = 0; i < NTHREADS; i++) {
       thread_param[i] = malloc(sizeof(thread_param));
       if (!thread_param[i]) {
