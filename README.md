@@ -8,3 +8,6 @@ easily be able to compile the code by changing the `CC` variable and running
 `make`.
 
 If you need any help or find any bug, you should open a github issue.
+
+---
+Assignment can be found [here](./assignment.md).
