@@ -26,9 +26,8 @@ fn main() {
 
     let filename = args.filename.as_str();
 
-    let graph = Graph::from_file(filename);
+    let mut graph = Graph::from_file(filename);
 
     graph.csc.info();
-
-    println!("{:?}", graph);
+    graph.trim();
 }

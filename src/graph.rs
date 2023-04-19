@@ -1,4 +1,4 @@
-use std::process::exit;
+use std::{process::exit, time::Instant};
 
 use crate::csx::CSX;
 
@@ -44,5 +44,29 @@ impl Graph {
             }
         };
         Self::new(csc)
+    }
+
+    pub fn trim(&mut self) {
+        let start = Instant::now();
+        let mut has_in = vec![false; self.num_vertices];
+        let mut has_out = vec![false; self.num_vertices];
+
+        for v in 0..self.num_vertices {
+            for j in self.csc.com[v]..self.csc.com[v + 1] {
+                if !self.removed[v] && self.csc.unc[j] != v {
+                    has_in[v] = true;
+                    has_out[self.csc.unc[j]] = true;
+                }
+            }
+        }
+
+        for v in 0..self.num_vertices {
+            if !has_in[v] || !has_out[v] {
+                self.removed[v] = true;
+                self.num_trimmed += 1;
+            }
+        }
+        log::trace!("Trimmed {} vertices", self.num_trimmed);
+        log::trace!("Trimming took: {:?}", start.elapsed());
     }
 }
