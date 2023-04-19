@@ -19,8 +19,8 @@ pub struct Graph {
 
 impl Graph {
     pub fn new(csc: CSX) -> Self {
-        let num_vertices = csc.num_of_vertices();
-        let num_edges = csc.num_of_edges();
+        let num_vertices = csc.num_of_vertices;
+        let num_edges = csc.num_of_edges;
         let removed = vec![false; num_vertices];
         let scc_id = vec![0; num_vertices];
         let num_trimmed = 0;
