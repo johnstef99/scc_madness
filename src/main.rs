@@ -30,4 +30,7 @@ fn main() {
 
     graph.csc.info();
     graph.trim();
+    graph.color_scc();
+
+    log::info!("Number of scc: {}", graph.num_of_scc());
 }
