@@ -1,10 +1,7 @@
-mod csx;
-mod graph;
-
-use graph::Graph;
-
 use clap::Parser;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
+
+use scc_madness::graph::Graph;
 
 #[derive(Parser, Debug)]
 #[command(author, about, version)]
