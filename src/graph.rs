@@ -1,4 +1,10 @@
-use std::{process::exit, time::Instant};
+use std::{
+    process::exit,
+    sync::atomic::{AtomicBool, Ordering},
+    time::Instant,
+};
+
+use rayon::prelude::*;
 
 use crate::csx::CSX;
 
@@ -48,6 +54,58 @@ impl Graph {
             }
         };
         Self::new(csc)
+    }
+
+    pub fn trim_par(&mut self) -> std::io::Result<()> {
+        let start = Instant::now();
+
+        let mut has_in: Vec<bool> = vec![false; self.num_vertices];
+
+        let has_out: Vec<AtomicBool> = vec![false; self.num_vertices]
+            .into_par_iter()
+            .map(|x| AtomicBool::new(x))
+            .collect();
+
+        // filter out already removed vertices
+        let iter = has_in
+            .par_iter_mut()
+            .enumerate()
+            .zip(self.removed.par_iter())
+            .filter_map(|(tuple, removed)| (!removed).then(|| tuple));
+
+        // filter out vertices with no incoming or outgoing edges excluding self-loops
+        iter.for_each(|(idx, hi)| {
+            let range = self.csc.range_for(idx);
+            let iter = self.csc.unc[range]
+                .iter()
+                .filter_map(|unc| (*unc != idx).then(|| &has_out[*unc]));
+
+            for ho in iter {
+                *hi = true;
+                ho.store(true, Ordering::Relaxed);
+            }
+        });
+
+        let trimmed = has_in
+            .par_iter()
+            .zip(has_out.par_iter())
+            .zip(self.removed.par_iter_mut())
+            .map(|((hi, ho), rm)| {
+                if !*hi || !ho.load(Ordering::Relaxed) {
+                    *rm = true;
+                    1
+                } else {
+                    0
+                }
+            })
+            .sum::<usize>();
+
+        self.num_trimmed = trimmed;
+
+        log::trace!("Trimmed {} vertices", self.num_trimmed);
+        log::trace!("Trimming took: {:?}", start.elapsed());
+
+        Ok(())
     }
 
     pub fn trim(&mut self) {

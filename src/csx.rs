@@ -2,6 +2,7 @@ use std::{
     fmt::{self, Formatter},
     fs::File,
     io::{self, BufRead},
+    ops::Range,
     path::Path,
     time::Instant,
 };
@@ -32,7 +33,7 @@ impl fmt::Display for CSXError {
             CSXError::BadMatrixFile => write!(f, "Bad matrix file."),
             CSXError::ErrorInHeader => write!(f, "Error in header."),
             CSXError::ErrorInLine(l) => {
-                write!(f, "There is an error in line {} after the header.", l+1)
+                write!(f, "There is an error in line {} after the header.", l + 1)
             }
         }
     }
@@ -43,7 +44,7 @@ impl CSX {
         CSX {
             num_of_vertices,
             num_of_edges,
-            com: vec![0; num_of_vertices + 1],
+            com: vec![num_of_edges; num_of_vertices + 1],
             unc: vec![0; num_of_edges],
         }
     }
@@ -146,5 +147,9 @@ impl CSX {
         log::info!("{:_^20}", "Matrix Info");
         log::info!("M/N: {:>15}", self.num_of_vertices);
         log::info!("NNZ: {:>15}", self.num_of_edges);
+    }
+
+    pub fn range_for(&self, i: usize) -> Range<usize> {
+        self.com[i]..self.com[i + 1]
     }
 }
