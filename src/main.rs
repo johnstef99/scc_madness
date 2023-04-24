@@ -14,7 +14,7 @@ struct Cli {
     verbose: Verbosity<InfoLevel>,
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args = Cli::parse();
 
     env_logger::Builder::new()
@@ -23,11 +23,18 @@ fn main() {
 
     let filename = args.filename.as_str();
 
-    let mut graph = Graph::from_file(filename);
+    let mut graph1 = Graph::from_file(filename);
+    graph1.csc.info();
+    graph1.trim_par()?;
+    graph1.color_scc();
+    log::info!("Number of scc: {}", graph1.num_of_scc());
+    std::mem::drop(graph1);
 
-    graph.csc.info();
-    graph.trim();
-    graph.color_scc();
+    let mut graph2 = Graph::from_file(filename);
+    graph2.trim_par()?;
+    graph2.color_scc_par();
+    log::info!("Number of scc: {}", graph2.num_of_scc());
+    std::mem::drop(graph2);
 
-    log::info!("Number of scc: {}", graph.num_of_scc());
+    Ok(())
 }

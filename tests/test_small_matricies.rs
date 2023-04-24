@@ -2,10 +2,18 @@ use scc_madness::graph::Graph;
 
 fn test_matrix(filename: &str, num_trimmed: usize, num_of_scc: usize) {
     let mut graph = Graph::from_file(filename);
+    graph.trim_par().unwrap();
+    assert_eq!(graph.num_trimmed, num_trimmed);
+    graph.color_scc_par();
+    assert_eq!(graph.num_of_scc(), num_of_scc);
+    std::mem::drop(graph);
+
+    let mut graph = Graph::from_file(filename);
     graph.trim();
     assert_eq!(graph.num_trimmed, num_trimmed);
     graph.color_scc();
     assert_eq!(graph.num_of_scc(), num_of_scc);
+    std::mem::drop(graph);
 }
 
 #[test]
