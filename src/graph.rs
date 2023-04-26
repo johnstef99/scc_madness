@@ -132,7 +132,6 @@ impl Graph {
         log::trace!("Trimming took: {:?}", start.elapsed());
     }
 
-
     fn is_empty(&self) -> bool {
         for v in 0..self.num_vertices {
             if !self.removed[v] {
@@ -208,6 +207,7 @@ impl Graph {
         log::trace!("Start coloring scc");
         let start = Instant::now();
         let mut colors = vec![0; self.num_vertices];
+        let mut old_colors;
 
         while !self.is_empty_par() {
             colors
@@ -218,7 +218,7 @@ impl Graph {
                     false => *color = v,
                 });
 
-            let mut old_colors = colors.clone();
+            old_colors = colors.clone();
 
             let color_changed = AtomicBool::new(true);
             while color_changed.load(Ordering::Relaxed) {
@@ -326,12 +326,10 @@ impl Graph {
     }
 
     pub fn num_of_scc(&self) -> usize {
-        let mut scc = 0;
-        for v in 0..self.num_vertices {
-            if self.scc_id[v] == v {
-                scc += 1;
-            }
-        }
-        scc
+        self.scc_id
+            .par_iter()
+            .enumerate()
+            .filter(|(i, id)| **id == *i)
+            .count()
     }
 }
