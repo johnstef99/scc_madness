@@ -26,13 +26,15 @@ fn main() -> std::io::Result<()> {
     let mut graph1 = Graph::from_file(filename);
     graph1.csc.info();
     graph1.trim_par()?;
-    graph1.color_scc();
+    graph1.color_scc_par();
     log::info!("Number of scc: {}", graph1.num_of_scc());
     std::mem::drop(graph1);
 
     let mut graph2 = Graph::from_file(filename);
-    graph2.trim_par()?;
-    graph2.color_scc_par();
+    unsafe {
+        graph2.trim_par_unsafe()?;
+        graph2.color_scc_par_unsafe();
+    };
     log::info!("Number of scc: {}", graph2.num_of_scc());
     std::mem::drop(graph2);
 
