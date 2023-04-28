@@ -1,4 +1,5 @@
 use std::{
+    iter::repeat_with,
     process::exit,
     sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     time::Instant,
@@ -176,7 +177,7 @@ impl Graph {
         removed: &[AtomicBool],
         scc_id: &[AtomicUsize],
         entry: usize,
-        colors: &[usize],
+        colors: &[AtomicUsize],
     ) {
         removed[entry].store(true, Ordering::Relaxed);
 
@@ -192,7 +193,7 @@ impl Graph {
             let v = fifo[head];
             head += 1;
 
-            if !removed[v].load(Ordering::Relaxed) && colors[v] == entry {
+            if !removed[v].load(Ordering::Relaxed) && colors[v].load(Ordering::Relaxed) == entry {
                 removed[v].store(true, Ordering::Relaxed);
                 scc_id[v].store(entry, Ordering::Relaxed);
 
@@ -206,46 +207,45 @@ impl Graph {
     pub fn color_scc_par(&mut self) {
         log::trace!("Start coloring scc");
         let start = Instant::now();
-        let mut colors = vec![0; self.num_vertices];
-        let mut old_colors;
+        let mut colors = repeat_with(|| AtomicUsize::new(0))
+            .take(self.num_vertices)
+            .collect::<Vec<_>>();
 
         while !self.is_empty_par() {
-            colors
-                .par_iter_mut()
-                .enumerate()
-                .for_each(|(v, color)| match self.removed[v] {
-                    true => *color = self.scc_id[v],
-                    false => *color = v,
-                });
+            colors.par_iter_mut().enumerate().for_each(|(v, color)| {
+                *color.get_mut() = if self.removed[v] { self.scc_id[v] } else { v }
+            });
 
-            old_colors = colors.clone();
+            loop {
+                assert_eq!(self.num_vertices, colors.len());
+                assert_eq!(self.num_vertices, self.removed.len());
+                let color_changed = self
+                    .removed
+                    .par_iter()
+                    .enumerate()
+                    .filter_map(|(u, removed)| (!removed).then(|| u))
+                    .map(|u| {
+                        let mut task_color_changed = false;
 
-            let color_changed = AtomicBool::new(true);
-            while color_changed.load(Ordering::Relaxed) {
-                color_changed.store(false, Ordering::Relaxed);
+                        for j in self.csc.com[u]..self.csc.com[u + 1] {
+                            let w = self.csc.unc[j];
+                            if self.removed[w] {
+                                continue;
+                            }
+                            let w = colors[w].load(Ordering::Relaxed);
+                            if colors[u].load(Ordering::Relaxed) > w {
+                                colors[u].store(w, Ordering::Relaxed);
+                                task_color_changed = true;
+                            }
+                        }
+                        task_color_changed
+                    })
+                    .reduce(|| false, |l, r| l || r);
 
-                (0..self.num_vertices)
-                    .into_par_iter()
-                    .zip(colors.par_iter_mut())
-                    .zip(self.removed.par_iter())
-                    .filter_map(|((u, color), removed)| (!removed).then(|| (u, color)))
-                    .for_each(|(u, color)| {
-                        let range = self.csc.range_for(u);
-
-                        self.csc.unc[range]
-                            .iter()
-                            .filter(|w| !self.removed[**w])
-                            .for_each(|w| {
-                                if *color > old_colors[*w] {
-                                    *color = old_colors[*w];
-                                    color_changed.store(true, Ordering::Relaxed);
-                                }
-                            });
-                    });
-
-                std::mem::swap(&mut colors, &mut old_colors);
+                if !color_changed {
+                    break;
+                }
             }
-
             let removed: Vec<AtomicBool> = self
                 .removed
                 .par_iter()
@@ -261,9 +261,9 @@ impl Graph {
                 .par_iter()
                 .enumerate()
                 .zip(colors.par_iter())
-                .filter(|((i, r), color)| !**r && **color == *i)
+                .filter(|((i, r), color)| !**r && color.load(Ordering::Relaxed) == *i)
                 .for_each(|((_i, _r), color)| {
-                    self.bfs_par(&removed, &scc_id, *color, &colors);
+                    self.bfs_par(&removed, &scc_id, color.load(Ordering::Relaxed), &colors);
                 });
 
             self.removed
@@ -469,6 +469,9 @@ impl Graph {
                     unsafe { self.bfs_par_unsafe(&removed, &scc_id, *color, &colors) };
                 });
         }
-        log::trace!("Coloring scc UNSAFE in parallel took: {:?}", start.elapsed());
+        log::trace!(
+            "Coloring scc UNSAFE in parallel took: {:?}",
+            start.elapsed()
+        );
     }
 }
