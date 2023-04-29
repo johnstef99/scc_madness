@@ -9,7 +9,7 @@ all: scc_rust_vs_c.pdf
 	convert $< $@
 
 .ms.ps:
-	REFER=$(REFER) groff -GeptkR -P-pa4 -ms -Tps $< > $@
+	cat config.ms $< | REFER=$(REFER) groff -GeptkR -P-pa4 -ms -Tps - > $@
 
 .ps.pdf:
 	ps2pdf $< > $@

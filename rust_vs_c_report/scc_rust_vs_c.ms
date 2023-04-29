@@ -1,46 +1,3 @@
-.\" config
-.nr PS 12
-.nr FM 0.1i
-.nr GROWPS 2
-.nr PSINCR 3p
-.nr FL \n[LL]
-.nr FPS \n[PS]-2
-.nr FGPS \n[PS]-2
-
-.OH '-\En[%]-''\E*[TITLE]'
-.EH '\E*[TITLE]''-\En[%]-'
-
-.de PT
-.ie \\n%=1 .if \\n[pg*P1] .tl \\*[pg*OH]
-.el \{\
-.	ie o .tl \\*[pg*OH]
-.	el .tl \\*[pg*EH]
-.\}
-.sp -1
-\l'6i\[ul]'
-..
-
-.nr FigCount 1
-
-.de figure
-. ps \n[FGPS]
-. nop Figure \\n[FigCount]: \\$^
-. ps \n[PS]
-.nr FigCount +1
-..
-
-.EQ
-delim $$
-define forall '\[fa]'
-define memof  '\[mo]'
-.EN
-
-.R1
-discard BXYZ
-no-accumulate
-.R2
-
-
 .ds TITLE SCC Coloring Algorithm - C vs Rust
 
 .\" cover
@@ -88,18 +45,6 @@ work-stealing scheduler similar to OpenCilk.
 .SH 1
 Why use unsafe Rust?
 .PP
-.\" In the C implementation there are some benign race conditions (race conditions
-.\" that don't affect the result) that are necessary for the speed of the algorithm
-.\" as discussed in the original coloring algorithm paper
-.\" .[
-.\"   bfs coloring
-.\" .]
-.\" in the \fIColoring\fR section.
-.\" .LP
-.\" Because of Rust's borrow checker, having two threads mutably access the same
-.\" data without any locks or atomics is impossible. So in order to fairly compare
-.\" the C and Rust implementations I first implemented the algorithm using only safe
-.\" Rust and then refactored it putting unsafe where it was necessary.
 In the C implementation, there are some benign race conditions that do not affect
 the result of the algorithm, but are necessary for its speed. These race conditions
 were discussed in the \fIColoring\fR section of the original algorithm paper.
