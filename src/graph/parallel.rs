@@ -68,7 +68,7 @@ impl Graph {
         removed: &[AtomicBool],
         scc_id: &[AtomicUsize],
         entry: usize,
-        colors: &[usize],
+        colors: &[AtomicUsize],
     ) {
         removed[entry].store(true, Ordering::Relaxed);
 
@@ -84,7 +84,7 @@ impl Graph {
             let v = fifo[head];
             head += 1;
 
-            if !removed[v].load(Ordering::Relaxed) && colors[v] == entry {
+            if !removed[v].load(Ordering::Relaxed) && colors[v].load(Ordering::Relaxed) == entry {
                 removed[v].store(true, Ordering::Relaxed);
                 scc_id[v].store(entry, Ordering::Relaxed);
 
@@ -98,40 +98,37 @@ impl Graph {
     pub fn color_scc_par(&mut self) {
         log::trace!("Start coloring scc");
         let start = Instant::now();
-        let mut colors = vec![0; self.num_vertices];
-        let mut old_colors;
+        let mut colors = (0..self.num_vertices)
+            .map(|_| AtomicUsize::new(0))
+            .collect::<Vec<_>>();
 
         while !self.is_empty_par() {
             colors.par_iter_mut().enumerate().for_each(|(v, color)| {
-                *color = self.scc_id[v];
+                *color.get_mut() = self.scc_id[v];
             });
-
-            old_colors = colors.clone();
 
             let color_changed = AtomicBool::new(true);
             while color_changed.load(Ordering::Relaxed) {
                 color_changed.store(false, Ordering::Relaxed);
 
-                (0..self.num_vertices)
-                    .into_par_iter()
-                    .zip(colors.par_iter_mut())
-                    .zip(self.removed.par_iter())
-                    .filter_map(|((u, color), removed)| (!removed).then(|| (u, color)))
-                    .for_each(|(u, color)| {
+                self.removed
+                    .par_iter()
+                    .enumerate()
+                    .filter_map(|(u, removed)| (!removed).then(|| u))
+                    .for_each(|u| {
                         let range = self.csc.range_for(u);
 
                         self.csc.unc[range]
                             .iter()
                             .filter(|w| !self.removed[**w])
                             .for_each(|w| {
-                                if *color > old_colors[*w] {
-                                    *color = old_colors[*w];
+                                let w = colors[*w].load(Ordering::Relaxed);
+                                if colors[u].load(Ordering::Relaxed) > w {
+                                    colors[u].store(w, Ordering::Relaxed);
                                     color_changed.store(true, Ordering::Relaxed);
                                 }
                             });
                     });
-
-                std::mem::swap(&mut colors, &mut old_colors);
             }
 
             let removed: Vec<AtomicBool> = self
@@ -149,9 +146,9 @@ impl Graph {
                 .par_iter()
                 .enumerate()
                 .zip(colors.par_iter())
-                .filter(|((i, r), color)| !**r && **color == *i)
+                .filter(|((i, r), color)| !**r && color.load(Ordering::Relaxed) == *i)
                 .for_each(|((_i, _r), color)| {
-                    self.bfs_par(&removed, &scc_id, *color, &colors);
+                    self.bfs_par(&removed, &scc_id, color.load(Ordering::Relaxed), &colors);
                 });
 
             self.removed
