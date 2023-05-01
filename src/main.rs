@@ -109,8 +109,13 @@ fn main() -> std::io::Result<()> {
 
     let mut results: Vec<BenchResult> = vec![];
     for i in 0..number_of_runs {
-        let i = format!("Run {}/{}", i + 1, number_of_runs);
-        log::info!("{:_^30}", i);
+        let i = format!(
+            "Run {} {}/{}",
+            filename.to_string().split('/').last().unwrap().to_string(),
+            i + 1,
+            number_of_runs
+        );
+        log::info!("{:_^40}", i);
         let res = benchemark(filename)?;
         results.push(res);
     }
