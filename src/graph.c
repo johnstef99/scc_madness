@@ -139,12 +139,8 @@ void graph_colorSCC(graph g) {
   }
 
   while (!graph_is_empty(g)) {
-    for (size_t v = 0; v < g->v; v++) {
-      if (!g->removed[v]) {
-        colors[v] = v;
-      } else {
-        colors[v] = g->scc_id[v];
-      }
+    cilk_for (size_t v = 0; v < g->v; v++) {
+      colors[v] = g->scc_id[v];
     }
 
     bool cilk_reducer(bool_false, bool_or) color_changed = true;
