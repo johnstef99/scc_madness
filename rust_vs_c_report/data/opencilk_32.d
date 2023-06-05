@@ -1,0 +1,15 @@
+celegansneural.mtx        11.76
+foldoc.mtx                14.90
+language.mtx              35.07
+eu-2005.mtx              581.09
+wiki-topcats.mtx         804.62
+sx-stackoverflow.mtx    1028.65
+wikipedia-20060925.mtx  3135.02
+wikipedia-20061104.mtx  3158.84
+wikipedia-20070206.mtx  3693.73
+wb-edu.mtx             50219.10
+indochina-2004.mtx     14704.60
+uk-2002.mtx            25689.90
+arabic-2005.mtx        20030.70
+uk-2005.mtx            60288.50
+twitter7.mtx           83119.60

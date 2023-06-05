@@ -45,9 +45,10 @@ work-stealing scheduler similar to OpenCilk.
 .SH 1
 Why use unsafe Rust?
 .PP
-In the C implementation, there are some benign race conditions that do not affect
-the result of the algorithm, but are necessary for its speed. These race conditions
-were discussed in the \fIColoring\fR section of the original algorithm paper.
+In the C implementation, there are some benign race conditions that do not
+affect the result of the algorithm, but are necessary for its speed. These race
+conditions were discussed in the \fIColoring\fR section of the original
+algorithm paper.
 .[
   bfs coloring
 .]
@@ -64,6 +65,7 @@ Results
 At the following table we can see all the graphs that were used for testing and
 the number of vertices, edges and SCC for each one.
 .DS C
+.ps \n[PS]-2
 .TS
 tab(|);
 |l|c|c|c|
@@ -86,6 +88,7 @@ indochina-2004        |  7414866 |  194109311 | 1749052
 uk-2002               | 18520486 |  298113762 | 3887634
 arabic-2005           | 22744080 |  639999458 | 4000414
 uk-2005               | 39459925 |  936364282 | 5811041
+twitter7              | 41652230 | 1468365182 | 8044728
 _
 .TE
 .figure Table of graphs used for testing (sorted by the number of edges).
@@ -94,97 +97,108 @@ _
 Now let's take a look for each implementation of the coloring algorithm how much
 time was needed to find all the Strongly Connected Components:
 .DS C
+.ps \n[PS]-2
 .TS
 decimalpoint(.) nospaces tab(|);
-|l|c|c|c|
-|l|n|n|n|.
+|l|c|c|c|c|
+|l|n|n|n|n|.
 _
-Graph's Name       | OpenCilk | Safe Rust | Unsafe Rust
+Graph's Name       | Serial Rust | Safe Rust | Unsafe Rust | OpenCilk
 =
-celegansneural     |     1.46 |      2.55 |        1.39
-foldoc             |     2.73 |      7.16 |        2.58
-language           |    29.37 |     93.56 |       44.02
-eu-2005            |   192.66 |    483.15 |      208.97
-wiki-topcats       |  1601.57 |      5.73 |     1993.44
-sx-stackoverflow   |   654.95 |    938.18 |      627.43
-wikipedia-20060925 |   2674.3 |  37205.44 |     3584.63
-wikipedia-20061104 |  2038.97 |  42293.73 |     2558.36
-wikipedia-20070206 |  2314.81 |  63242.29 |     2650.71
-wb-edu             | 19273.45 |  37350.83 |    16305.11
-indochina-2004     |  8448.95 |  27135.79 |    11044.77
-uk-2002            | 20127.72 |  29735.58 |    13231.55
-arabic-2005        | 17951.26 |  30642.27 |    13168.97
-uk-2005            | 62696.62 | 123428.41 |    51449.39
+celegansneural     |       0.046 |      5.01 |        1.94 |     8.43
+foldoc             |        3.33 |      8.29 |        5.17 |    17.20
+language           |      102.21 |     78.93 |       34.45 |    39.00
+eu-2005            |      697.36 |    243.12 |      184.03 |   597.93
+wiki-topcats       |    10089.68 |    976.82 |      838.79 |   699.20
+sx-stackoverflow   |     1641.96 |    687.07 |      597.65 |  1010.50
+wikipedia-20060925 |     9495.09 |   1679.05 |     1527.14 |  3003.81
+wikipedia-20061104 |     6851.03 |   1415.65 |     1262.04 |  2840.85
+wikipedia-20070206 |     6662.01 |   1573.03 |     1453.00 |  3395.13
+wb-edu             |   101018.82 |   8287.11 |     5571.10 | 42638.20
+indochina-2004     |    35034.07 |   9237.19 |     7390.41 | 21669.90
+uk-2002            |    74700.83 |   7814.78 |     5692.67 | 44417.30
+arabic-2005        |    64904.20 |   8340.29 |     6905.64 | 35089.60
+uk-2005            |   255174.98 |  30235.00 |    23029.56 | 85217.30
+twitter7           |   348015.33 |  49281.95 |    48548.47 | 52441.90
 _
 .TE
 .figure Table of execution time in milliseconds of each implementation for each
-\s[\n[FGPS]]graph (machine used: Macbook Pro M1 16GB 1TB).\s[\n[PS]]
+\s[\n[FGPS]]graph (CPU: AMD EPYC 7662, Threads: 32).\s[\n[PS]]
 .DE
 
 .LP
-In Fig.\n[FigCount] the graph shows the relative execution time of each
-implementation (relative to the slowest one) for each graph. We can see that
-the slowest implementation is always the safe Rust one and C and unsafe Rust are
-competing very closely, with both of them in average finish in 1/3 of the time
-that safe Rust needs.
-.LP
-In graphs like the wikipedia-20060925, wikipedia-20061104 and wikipedia-20070206
-the safe Rust implementation is 10+ times slower than the other two. This
-implies that a lot of coloring cycles are happening in these graphs and the safe
-Rust implementation is paying the cost of the atomic operations and the cloning
-of some vectors to avoid race conditions that are happening.
+In Figure \n[FigCount] we can see the speedup for parallel Rust implementations
+compared to the serial one. Both safe and unsafe implementations for large
+graphs provide more than 5x speedup. Also the safe implementation where we
+ensure there are no race conditions isn't that far behind the unsafe one.
+Compering Rust with OpenCilk, we can see that the Rust is almost always faster.
 
 .G1
 frame invis ht 2 wid 5 left solid bot solid
-#ticks bottom off
-label left "Relative Time" left 0.2
-#label bottom "Number of edges" left 0.2
-grid bottom ticks off from 1 to 14 by 1
+label left "Speed up" left 0.2
+grid bottom ticks off from 2 to 30 by 2
 
-draw openCilk solid  color "red"
-draw safe     dashed color "brown"
-draw unsafe   dashed color "blue"
+define bar { #(color, x, y, width)
+  barx  = $2
+  bary  = $3
+  width = $4
+
+  line color "$1" from barx, 0 to barx, bary
+  line color "$1" from barx, bary to barx+width, bary
+  line color "$1" from barx+width, bary to barx+width, 0
+}
+
+n_line = 0
 
 copy "data/times.d" thru {
-  pic A:Frame.Origin + (x_gg($1),0)
-  pic B:Frame.Origin + (x_gg($1+0.5), -0.5/3)
-  pic line from A to B "$2" ljust aligned below
+  n_line = n_line + 1
+  if n_line > 1 then {
+    pic A:Frame.Origin + (x_gg($1*2),0)
+    pic B:Frame.Origin + (x_gg($1*2+0.5), -0.5/8)
+    pic line from A to B "$2" ljust aligned below
 
-  maxx = max($3, $4)
-  maxx = max(maxx, $5)
-  next openCilk at $1, $3/maxx
-  next safe   at $1, $4/maxx
-  next unsafe  at $1, $5/maxx
+    x = $1*2
+    barw = 0.4
+    serial = $3
+    safe_speedup = serial / $4
+    unsafe_speedup = serial / $5
+    open_cilk_speedup = serial / $6
+
+    bar(orange, x-barw*1.5 - 0.1, unsafe_speedup,    barw)
+    bar(blue,   x-barw*0.5 + 0.0, safe_speedup,      barw)
+    bar(green,  x+barw*0.5 + 0.1, open_cilk_speedup, barw)
+  }
 }
 
 # legend
-lx  = 1.5   # legend x
-ly  = 0.9  # legend y
-lyg = 0.1  # legend gap
-lxg = 0.5   # legend gap
+lx  = 0.5   # legend x
+ly  = 16  # legend y
+lyg = 1.4 # legend gap
+lxg = 0.5 # legend gap
 
 copy until "DONE" thru {
   line color "$3" $2 from lx, $1 to lx+lxg, $1
   $4 size -2 ljust at lx+lxg*1.1, $1
 }
-ly       solid  red   "OpenCilk"
-ly-lyg   dashed brown "SafeRust"
-ly-2*lyg dashed blue  "UnsafeRust"
+
+ly       solid orange "UnsafeRust"
+ly-lyg   solid blue   "SafeRust"
+ly-2*lyg   solid green  "OpenCilk"
 DONE
 .G2
-.sp 3.5
+.sp 3.6
 .DS C
-.figure Relative time graph for the parallel implementations.
+.figure Speedup for parallel implementations relative to the serial Rust.
 .DE
 
 .SH 1
 Conclusion
 .PP
-I really wasn't expecting Rust to perform so close to the OpenCilk
-implementation. Writing Rust takes more time than writing C, especially when you
-need to do something unsafe. But knowing that your code is safe anywhere else
-except inside the unsafe blocks is a great feeling. Having all that safety
-without sacrificing any performance is even better.
+I really wasn't expecting Rust to outperform the OpenCilk implementation.
+Writing Rust takes more time than writing C, especially when you need to do
+something unsafe. But knowing that your code is safe anywhere else except inside
+the unsafe blocks is a great feeling. Having all that safety without sacrificing
+any performance is even better.
 
 .B1
 .CD
